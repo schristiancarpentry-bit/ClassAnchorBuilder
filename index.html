@@ -313,15 +313,11 @@ ${extra ? `Additional context: ${extra}` : ''}
 Include all mandatory units with accurate unit codes, titles, learning outcomes and assessment criteria based on the official ${awarding} specification for this qualification.`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('/.netlify/functions/claude-proxy', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-client-side-api-key-flag': 'my-personal-builder-tool'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        apiKey,
         model: 'claude-sonnet-4-6',
         max_tokens: 8000,
         system: systemPrompt,
