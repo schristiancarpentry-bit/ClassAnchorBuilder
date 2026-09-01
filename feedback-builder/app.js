@@ -331,19 +331,23 @@
   // ---------------------------------------------------------------------
   // Actions
   // ---------------------------------------------------------------------
+  // These mutate state and save, but deliberately do NOT re-render — callers
+  // choose what to redraw. This matters most for the picker checkbox: a full
+  // renderAll() would replace #pickerList (and every checkbox in it) from
+  // underneath the very checkbox the click event is still dispatching on,
+  // which drops browser focus mid-click and can trigger an unpredictable
+  // refocus/auto-scroll elsewhere on the page.
   function addSliderToTab(libId) {
     var tab = activeTab();
     if (tab.sliders.some(function (i) { return i.libId === libId; })) return;
     tab.sliders.push({ libId: libId, value: 5, overrides: {} });
     saveStateNow();
-    renderAll();
   }
 
   function removeSliderFromTab(index) {
     var tab = activeTab();
     tab.sliders.splice(index, 1);
     saveStateNow();
-    renderAll();
   }
 
   function removeSliderFromTabByLibId(libId) {
@@ -353,11 +357,13 @@
   }
 
   // Tick/untick from the library picker: add if not present, remove if present.
+  // Returns true if the slider is now active.
   function toggleSliderInTab(libId) {
     var tab = activeTab();
     var present = tab.sliders.some(function (i) { return i.libId === libId; });
     if (present) removeSliderFromTabByLibId(libId);
     else addSliderToTab(libId);
+    return !present;
   }
 
   function newTab(fromDuplicate) {
@@ -581,7 +587,14 @@
     });
     el.pickerList.addEventListener("change", function (e) {
       var toggle = e.target.closest("[data-toggle-lib]");
-      if (toggle) toggleSliderInTab(toggle.getAttribute("data-toggle-lib"));
+      if (!toggle) return;
+      var nowAdded = toggleSliderInTab(toggle.getAttribute("data-toggle-lib"));
+      // Targeted update only: leave #pickerList itself untouched (see comment
+      // above addSliderToTab) — just flip the highlight on this one row.
+      var item = toggle.closest(".picker-item");
+      if (item) item.classList.toggle("added", nowAdded);
+      renderActiveSliders(activeTab());
+      renderSummary(activeTab());
     });
 
     el.btnAddCustom.addEventListener("click", function () { openModal("create"); });
@@ -630,7 +643,13 @@
       var tab = activeTab();
       var inst = tab.sliders[idx];
 
-      if (e.target.closest("[data-remove-slider]")) { removeSliderFromTab(idx); return; }
+      if (e.target.closest("[data-remove-slider]")) {
+        removeSliderFromTab(idx);
+        renderActiveSliders(tab);
+        renderPicker(tab);
+        renderSummary(tab);
+        return;
+      }
 
       if (e.target.closest("[data-toggle-edit]")) {
         var editor = row.querySelector('[data-role="editor"]');

@@ -34,9 +34,15 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-anchor: none; }
 body {
   margin: 0;
+  /* The app rebuilds #activeList/#pickerList via innerHTML on most actions.
+     Chrome's scroll anchoring tries to compensate for content size changes
+     near the viewport and can misfire on a bulk replace like that, yanking
+     the whole page to an unrelated scroll position. Nothing here depends
+     on that behaviour, so switch it off outright. */
+  overflow-anchor: none;
   font-family: var(--font-body);
   background: var(--paper);
   background-image:
@@ -233,7 +239,13 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--brass); out
 .picker-item-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
 /* tick/untick control: a real checkbox, visually styled as a tick box */
-.picker-check { flex-shrink: 0; padding-top: 2px; cursor: pointer; }
+/* position:relative here matters: it makes this the containing block for the
+   absolutely-positioned input below. Without it, the browser still *paints*
+   the input in the right spot (auto insets fall back to its static position),
+   but its focus geometry resolves against a distant ancestor, and clicking it
+   makes the browser auto-scroll to "bring the focused control into view" at
+   that wrong, faraway position — the reported jump. */
+.picker-check { position: relative; flex-shrink: 0; padding-top: 2px; cursor: pointer; }
 .picker-check input { position: absolute; opacity: 0; width: 18px; height: 18px; margin: 0; cursor: pointer; }
 .picker-check-box {
   display: block; width: 18px; height: 18px; border-radius: 4px;
@@ -21411,19 +21423,23 @@ var __async = (__this, __arguments, generator) => {
   // ---------------------------------------------------------------------
   // Actions
   // ---------------------------------------------------------------------
+  // These mutate state and save, but deliberately do NOT re-render — callers
+  // choose what to redraw. This matters most for the picker checkbox: a full
+  // renderAll() would replace #pickerList (and every checkbox in it) from
+  // underneath the very checkbox the click event is still dispatching on,
+  // which drops browser focus mid-click and can trigger an unpredictable
+  // refocus/auto-scroll elsewhere on the page.
   function addSliderToTab(libId) {
     var tab = activeTab();
     if (tab.sliders.some(function (i) { return i.libId === libId; })) return;
     tab.sliders.push({ libId: libId, value: 5, overrides: {} });
     saveStateNow();
-    renderAll();
   }
 
   function removeSliderFromTab(index) {
     var tab = activeTab();
     tab.sliders.splice(index, 1);
     saveStateNow();
-    renderAll();
   }
 
   function removeSliderFromTabByLibId(libId) {
@@ -21433,11 +21449,13 @@ var __async = (__this, __arguments, generator) => {
   }
 
   // Tick/untick from the library picker: add if not present, remove if present.
+  // Returns true if the slider is now active.
   function toggleSliderInTab(libId) {
     var tab = activeTab();
     var present = tab.sliders.some(function (i) { return i.libId === libId; });
     if (present) removeSliderFromTabByLibId(libId);
     else addSliderToTab(libId);
+    return !present;
   }
 
   function newTab(fromDuplicate) {
@@ -21661,7 +21679,14 @@ var __async = (__this, __arguments, generator) => {
     });
     el.pickerList.addEventListener("change", function (e) {
       var toggle = e.target.closest("[data-toggle-lib]");
-      if (toggle) toggleSliderInTab(toggle.getAttribute("data-toggle-lib"));
+      if (!toggle) return;
+      var nowAdded = toggleSliderInTab(toggle.getAttribute("data-toggle-lib"));
+      // Targeted update only: leave #pickerList itself untouched (see comment
+      // above addSliderToTab) — just flip the highlight on this one row.
+      var item = toggle.closest(".picker-item");
+      if (item) item.classList.toggle("added", nowAdded);
+      renderActiveSliders(activeTab());
+      renderSummary(activeTab());
     });
 
     el.btnAddCustom.addEventListener("click", function () { openModal("create"); });
@@ -21710,7 +21735,13 @@ var __async = (__this, __arguments, generator) => {
       var tab = activeTab();
       var inst = tab.sliders[idx];
 
-      if (e.target.closest("[data-remove-slider]")) { removeSliderFromTab(idx); return; }
+      if (e.target.closest("[data-remove-slider]")) {
+        removeSliderFromTab(idx);
+        renderActiveSliders(tab);
+        renderPicker(tab);
+        renderSummary(tab);
+        return;
+      }
 
       if (e.target.closest("[data-toggle-edit]")) {
         var editor = row.querySelector('[data-role="editor"]');
