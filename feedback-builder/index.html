@@ -96,7 +96,8 @@
         </div>
         <div class="roster-group-col">
           <label for="rosterGroupInput">Group</label>
-          <input id="rosterGroupInput" type="text" placeholder="e.g. Plumbing L2 AM" />
+          <input id="rosterGroupInput" type="text" placeholder="e.g. Plumbing L2 AM (or leave blank)" list="rosterGroupsList" autocomplete="off" />
+          <datalist id="rosterGroupsList"></datalist>
         </div>
       </div>
       <button type="button" id="btnAddRoster" class="btn btn-primary">+ Add to Roster</button>

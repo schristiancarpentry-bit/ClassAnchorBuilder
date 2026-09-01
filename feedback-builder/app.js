@@ -396,6 +396,12 @@
     var selectedCount = roster.filter(function (r) { return r.selected; }).length;
     el.rosterSelectedCount.textContent = selectedCount + (selectedCount === 1 ? " student selected" : " students selected");
     el.btnExportRoster.disabled = selectedCount === 0;
+
+    // Offer existing groups as autocomplete suggestions, so adding another
+    // batch to a group already in use is a pick, not a retype (and can't
+    // accidentally create a near-duplicate like "Plumbing L2" vs "plumbing l2").
+    var existingGroups = Array.from(new Set(roster.map(function (r) { return r.group.trim(); }).filter(Boolean))).sort();
+    el.rosterGroupsList.innerHTML = existingGroups.map(function (g) { return '<option value="' + esc(g) + '"></option>'; }).join("");
   }
 
   // Builds tab-shaped objects (same shape buildSummary/buildTabSection
@@ -666,7 +672,8 @@
       rosterSearch: document.getElementById("rosterSearch"),
       rosterSelectedCount: document.getElementById("rosterSelectedCount"),
       rosterList: document.getElementById("rosterList"),
-      btnExportRoster: document.getElementById("btnExportRoster")
+      btnExportRoster: document.getElementById("btnExportRoster"),
+      rosterGroupsList: document.getElementById("rosterGroupsList")
     };
 
     // Populate category <select> in modal
