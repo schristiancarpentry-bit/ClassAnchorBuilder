@@ -210,6 +210,10 @@
         var added = !!activeSet[s.id];
         html +=
           '<div class="picker-item' + (added ? " added" : "") + '" data-lib-id="' + s.id + '">' +
+          '<label class="picker-check" title="' + (added ? "Remove from this assessment" : "Add to this assessment") + '">' +
+          '<input type="checkbox" data-toggle-lib="' + s.id + '"' + (added ? " checked" : "") + " />" +
+          '<span class="picker-check-box" aria-hidden="true"></span>' +
+          "</label>" +
           '<div class="picker-item-main">' +
           '<div class="picker-item-name">' + esc(s.name) + (s.isEdited ? ' <span class="tag">edited</span>' : "") + (s.isCustom ? ' <span class="tag">custom</span>' : "") + "</div>" +
           '<div class="picker-item-desc">' + esc(s.description || "") + "</div>" +
@@ -217,7 +221,6 @@
           '<div class="picker-item-actions">' +
           '<button type="button" class="link-btn" data-edit-lib="' + s.id + '" title="Edit this slider">Edit</button>' +
           (s.isCustom ? '<button type="button" class="link-btn" data-delete-lib="' + s.id + '" title="Delete custom slider">Delete</button>' : "") +
-          '<button type="button" class="btn-add' + (added ? " is-added" : "") + '" data-add-lib="' + s.id + '">' + (added ? "Added" : "+ Add") + "</button>" +
           "</div></div>";
       });
       html += "</div>";
@@ -341,6 +344,20 @@
     tab.sliders.splice(index, 1);
     saveStateNow();
     renderAll();
+  }
+
+  function removeSliderFromTabByLibId(libId) {
+    var tab = activeTab();
+    var idx = tab.sliders.findIndex(function (i) { return i.libId === libId; });
+    if (idx !== -1) removeSliderFromTab(idx);
+  }
+
+  // Tick/untick from the library picker: add if not present, remove if present.
+  function toggleSliderInTab(libId) {
+    var tab = activeTab();
+    var present = tab.sliders.some(function (i) { return i.libId === libId; });
+    if (present) removeSliderFromTabByLibId(libId);
+    else addSliderToTab(libId);
   }
 
   function newTab(fromDuplicate) {
@@ -557,12 +574,14 @@
     el.pickerSearch.addEventListener("input", function () { renderPicker(activeTab()); });
 
     el.pickerList.addEventListener("click", function (e) {
-      var addBtn = e.target.closest("[data-add-lib]");
-      if (addBtn) { addSliderToTab(addBtn.getAttribute("data-add-lib")); return; }
       var editBtn = e.target.closest("[data-edit-lib]");
       if (editBtn) { openModal("edit", editBtn.getAttribute("data-edit-lib")); return; }
       var delBtn = e.target.closest("[data-delete-lib]");
       if (delBtn) { deleteCustomSlider(delBtn.getAttribute("data-delete-lib")); return; }
+    });
+    el.pickerList.addEventListener("change", function (e) {
+      var toggle = e.target.closest("[data-toggle-lib]");
+      if (toggle) toggleSliderInTab(toggle.getAttribute("data-toggle-lib"));
     });
 
     el.btnAddCustom.addEventListener("click", function () { openModal("create"); });

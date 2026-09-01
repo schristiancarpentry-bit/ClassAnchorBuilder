@@ -217,10 +217,12 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--brass); out
 }
 .picker-cat:first-child h4 { margin-top: 0; }
 .picker-item {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
-  padding: 8px 4px; border-bottom: 1px solid #f0eee6;
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 6px; border-bottom: 1px solid #f0eee6; border-radius: 6px;
+  transition: background 0.15s;
 }
-.picker-item.added { opacity: 0.6; }
+.picker-item.added { background: #f8f1e2; }
+.picker-item-main { flex: 1; min-width: 0; }
 .picker-item-name { font-weight: 600; font-size: 0.87rem; }
 .picker-item-desc { font-size: 0.76rem; color: var(--soft); margin-top: 2px; }
 .tag {
@@ -229,12 +231,25 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--brass); out
   vertical-align: middle;
 }
 .picker-item-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.btn-add {
-  font-size: 0.76rem; font-weight: 700; padding: 5px 10px; border-radius: 6px;
-  border: 1px solid var(--brass); background: #fff; color: var(--brass-dk); cursor: pointer;
+
+/* tick/untick control: a real checkbox, visually styled as a tick box */
+.picker-check { flex-shrink: 0; padding-top: 2px; cursor: pointer; }
+.picker-check input { position: absolute; opacity: 0; width: 18px; height: 18px; margin: 0; cursor: pointer; }
+.picker-check-box {
+  display: block; width: 18px; height: 18px; border-radius: 4px;
+  border: 2px solid var(--line); background: #fff;
+  position: relative;
 }
-.btn-add:hover { background: var(--brass); color: #fff; }
-.btn-add.is-added { border-color: var(--line); color: var(--soft); background: #f0eee6; }
+.picker-check input:checked ~ .picker-check-box {
+  background: var(--brass); border-color: var(--brass);
+}
+.picker-check-box::after {
+  content: ""; position: absolute; left: 5px; top: 1px; width: 5px; height: 9px;
+  border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg);
+  opacity: 0; transition: opacity 0.1s;
+}
+.picker-check input:checked ~ .picker-check-box::after { opacity: 1; }
+.picker-check input:focus-visible ~ .picker-check-box { outline: 2px solid var(--brass); outline-offset: 2px; }
 
 .empty-hint { color: var(--soft); font-size: 0.88rem; font-style: italic; padding: 10px 2px; }
 
@@ -21275,6 +21290,10 @@ var __async = (__this, __arguments, generator) => {
         var added = !!activeSet[s.id];
         html +=
           '<div class="picker-item' + (added ? " added" : "") + '" data-lib-id="' + s.id + '">' +
+          '<label class="picker-check" title="' + (added ? "Remove from this assessment" : "Add to this assessment") + '">' +
+          '<input type="checkbox" data-toggle-lib="' + s.id + '"' + (added ? " checked" : "") + " />" +
+          '<span class="picker-check-box" aria-hidden="true"></span>' +
+          "</label>" +
           '<div class="picker-item-main">' +
           '<div class="picker-item-name">' + esc(s.name) + (s.isEdited ? ' <span class="tag">edited</span>' : "") + (s.isCustom ? ' <span class="tag">custom</span>' : "") + "</div>" +
           '<div class="picker-item-desc">' + esc(s.description || "") + "</div>" +
@@ -21282,7 +21301,6 @@ var __async = (__this, __arguments, generator) => {
           '<div class="picker-item-actions">' +
           '<button type="button" class="link-btn" data-edit-lib="' + s.id + '" title="Edit this slider">Edit</button>' +
           (s.isCustom ? '<button type="button" class="link-btn" data-delete-lib="' + s.id + '" title="Delete custom slider">Delete</button>' : "") +
-          '<button type="button" class="btn-add' + (added ? " is-added" : "") + '" data-add-lib="' + s.id + '">' + (added ? "Added" : "+ Add") + "</button>" +
           "</div></div>";
       });
       html += "</div>";
@@ -21406,6 +21424,20 @@ var __async = (__this, __arguments, generator) => {
     tab.sliders.splice(index, 1);
     saveStateNow();
     renderAll();
+  }
+
+  function removeSliderFromTabByLibId(libId) {
+    var tab = activeTab();
+    var idx = tab.sliders.findIndex(function (i) { return i.libId === libId; });
+    if (idx !== -1) removeSliderFromTab(idx);
+  }
+
+  // Tick/untick from the library picker: add if not present, remove if present.
+  function toggleSliderInTab(libId) {
+    var tab = activeTab();
+    var present = tab.sliders.some(function (i) { return i.libId === libId; });
+    if (present) removeSliderFromTabByLibId(libId);
+    else addSliderToTab(libId);
   }
 
   function newTab(fromDuplicate) {
@@ -21622,12 +21654,14 @@ var __async = (__this, __arguments, generator) => {
     el.pickerSearch.addEventListener("input", function () { renderPicker(activeTab()); });
 
     el.pickerList.addEventListener("click", function (e) {
-      var addBtn = e.target.closest("[data-add-lib]");
-      if (addBtn) { addSliderToTab(addBtn.getAttribute("data-add-lib")); return; }
       var editBtn = e.target.closest("[data-edit-lib]");
       if (editBtn) { openModal("edit", editBtn.getAttribute("data-edit-lib")); return; }
       var delBtn = e.target.closest("[data-delete-lib]");
       if (delBtn) { deleteCustomSlider(delBtn.getAttribute("data-delete-lib")); return; }
+    });
+    el.pickerList.addEventListener("change", function (e) {
+      var toggle = e.target.closest("[data-toggle-lib]");
+      if (toggle) toggleSliderInTab(toggle.getAttribute("data-toggle-lib"));
     });
 
     el.btnAddCustom.addEventListener("click", function () { openModal("create"); });
