@@ -506,6 +506,8 @@ input.gauge::-moz-range-thumb {
       <div><label for="studentGroup">Group</label><input id="studentGroup" type="text" autocomplete="off" /></div>
       <div><label for="studentLevel">Level</label><input id="studentLevel" type="text" autocomplete="off" placeholder="e.g. Level 2" /></div>
       <div><label for="studentUnit">Unit Reference</label><input id="studentUnit" type="text" autocomplete="off" placeholder="e.g. 601/1234/5 — Unit 204" /></div>
+      <div><label for="tutorName">Tutor / Assessor Name</label><input id="tutorName" type="text" autocomplete="off" placeholder="e.g. S. Christian" /><p class="hint">Remembered across every tab and export.</p></div>
+      <div><label for="assessmentDate">Date</label><input id="assessmentDate" type="date" /></div>
     </div>
   </section>
 
@@ -20961,10 +20963,21 @@ var __async = (__this, __arguments, generator) => {
     }
   };
 
+  var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
   function fmtDate(d) {
     d = d || new Date();
-    var months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-    return d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear();
+    return d.getDate() + " " + MONTHS[d.getMonth()] + " " + d.getFullYear();
+  }
+
+  // tab.date is stored as an ISO "YYYY-MM-DD" (from <input type="date">).
+  // Falls back to today if a tab predates this field or was left blank.
+  function fmtStoredDate(iso) {
+    if (iso) {
+      var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+      if (m) return Number(m[3]) + " " + MONTHS[Number(m[2]) - 1] + " " + m[1];
+    }
+    return fmtDate();
   }
 
   function safeFilePart(s) {
@@ -21011,12 +21024,13 @@ var __async = (__this, __arguments, generator) => {
       });
     }
 
+    var tutorName = (window.FeedbackApp && window.FeedbackApp.getTutorName && window.FeedbackApp.getTutorName()) || "";
     var detailsTable = new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       rows: [
         new TableRow({ children: [headerCell("Student Name", 25), valueCell(tab.student.name, 25), headerCell("Group", 25), valueCell(tab.student.group, 25)] }),
         new TableRow({ children: [headerCell("Level", 25), valueCell(tab.student.level, 25), headerCell("Unit Reference", 25), valueCell(tab.student.unit, 25)] }),
-        new TableRow({ children: [headerCell("Date", 25), valueCell(fmtDate(), 25), headerCell("Criteria Assessed", 25), valueCell(String(tab.sliders.length), 25)] })
+        new TableRow({ children: [headerCell("Tutor / Assessor", 25), valueCell(tutorName, 25), headerCell("Date", 25), valueCell(fmtStoredDate(tab.date), 25)] })
       ]
     });
 
@@ -21223,6 +21237,36 @@ var __async = (__this, __arguments, generator) => {
     return Math.max(1, Math.min(10, n));
   }
 
+  function todayISO() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + m + "-" + day;
+  }
+
+  // ---------------------------------------------------------------------
+  // Tutor name — a single, global setting (the same person is using the
+  // tool for every tab/export), unlike everything else which is per-tab.
+  // ---------------------------------------------------------------------
+  var TUTOR_KEY = "fb_tutor_name_v1";
+  var tutorName = "";
+
+  function loadTutorName() {
+    try {
+      tutorName = localStorage.getItem(TUTOR_KEY) || "";
+    } catch (e) {
+      console.warn("Could not load tutor name", e);
+    }
+  }
+
+  function saveTutorName() {
+    try {
+      localStorage.setItem(TUTOR_KEY, tutorName);
+    } catch (e) {
+      console.warn("Could not save tutor name", e);
+    }
+  }
+
   // ---------------------------------------------------------------------
   // Library (default sliders + user overrides + custom sliders)
   // ---------------------------------------------------------------------
@@ -21322,6 +21366,7 @@ var __async = (__this, __arguments, generator) => {
       id: uid("tab"),
       title: null, // null = auto-derive from student name
       student: { name: "", group: "", level: "", unit: "" },
+      date: todayISO(), // editable per-tab; defaults to today
       sliders: [], // { libId, value, overrides: {value: text} }
       notes: "",
       summaryOverride: null
@@ -21335,6 +21380,8 @@ var __async = (__this, __arguments, generator) => {
         var parsed = JSON.parse(raw);
         if (parsed && parsed.tabs && parsed.tabs.length) {
           state = parsed;
+          // Backfill a date on tabs saved before this field existed.
+          state.tabs.forEach(function (t) { if (!t.date) t.date = todayISO(); });
           return;
         }
       }
@@ -21540,6 +21587,8 @@ var __async = (__this, __arguments, generator) => {
     el.studentGroup.value = tab.student.group || "";
     el.studentLevel.value = tab.student.level || "";
     el.studentUnit.value = tab.student.unit || "";
+    el.assessmentDate.value = tab.date || "";
+    el.tutorName.value = tutorName; // global — same on every tab
     el.notes.value = tab.notes || "";
   }
 
@@ -21615,6 +21664,7 @@ var __async = (__this, __arguments, generator) => {
           level: tab.student.level,
           unit: tab.student.unit
         },
+        date: tab.date,
         sliders: tab.sliders.map(function (i) {
           return { libId: i.libId, value: i.value, overrides: Object.assign({}, i.overrides) };
         }),
@@ -21834,6 +21884,7 @@ var __async = (__this, __arguments, generator) => {
     loadLibrary();
     loadState();
     loadRoster();
+    loadTutorName();
 
     el = {
       tabBar: document.getElementById("tabBar"),
@@ -21843,6 +21894,8 @@ var __async = (__this, __arguments, generator) => {
       studentGroup: document.getElementById("studentGroup"),
       studentLevel: document.getElementById("studentLevel"),
       studentUnit: document.getElementById("studentUnit"),
+      tutorName: document.getElementById("tutorName"),
+      assessmentDate: document.getElementById("assessmentDate"),
       pickerSearch: document.getElementById("pickerSearch"),
       pickerList: document.getElementById("pickerList"),
       btnAddCustom: document.getElementById("btnAddCustom"),
@@ -21882,6 +21935,18 @@ var __async = (__this, __arguments, generator) => {
     bindHeaderField(el.studentGroup, "group");
     bindHeaderField(el.studentLevel, "level");
     bindHeaderField(el.studentUnit, "unit");
+
+    el.assessmentDate.addEventListener("input", function () {
+      activeTab().date = el.assessmentDate.value;
+      saveStateDebounced();
+    });
+
+    // Tutor name is global, not per-tab — it's the same person writing
+    // every piece of feedback, so it's set once and remembered everywhere.
+    el.tutorName.addEventListener("input", function () {
+      tutorName = el.tutorName.value;
+      saveTutorName();
+    });
 
     el.notes.addEventListener("input", function () {
       activeTab().notes = el.notes.value;
@@ -22147,6 +22212,7 @@ var __async = (__this, __arguments, generator) => {
     renderAll: function () { renderAll(); },
     getRoster: function () { return roster; },
     buildVirtualTabsForSelected: buildVirtualTabsForSelected,
+    getTutorName: function () { return tutorName; },
     _init: init
   };
 })();

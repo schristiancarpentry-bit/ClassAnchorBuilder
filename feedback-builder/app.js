@@ -26,6 +26,36 @@
     return Math.max(1, Math.min(10, n));
   }
 
+  function todayISO() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + m + "-" + day;
+  }
+
+  // ---------------------------------------------------------------------
+  // Tutor name — a single, global setting (the same person is using the
+  // tool for every tab/export), unlike everything else which is per-tab.
+  // ---------------------------------------------------------------------
+  var TUTOR_KEY = "fb_tutor_name_v1";
+  var tutorName = "";
+
+  function loadTutorName() {
+    try {
+      tutorName = localStorage.getItem(TUTOR_KEY) || "";
+    } catch (e) {
+      console.warn("Could not load tutor name", e);
+    }
+  }
+
+  function saveTutorName() {
+    try {
+      localStorage.setItem(TUTOR_KEY, tutorName);
+    } catch (e) {
+      console.warn("Could not save tutor name", e);
+    }
+  }
+
   // ---------------------------------------------------------------------
   // Library (default sliders + user overrides + custom sliders)
   // ---------------------------------------------------------------------
@@ -125,6 +155,7 @@
       id: uid("tab"),
       title: null, // null = auto-derive from student name
       student: { name: "", group: "", level: "", unit: "" },
+      date: todayISO(), // editable per-tab; defaults to today
       sliders: [], // { libId, value, overrides: {value: text} }
       notes: "",
       summaryOverride: null
@@ -138,6 +169,8 @@
         var parsed = JSON.parse(raw);
         if (parsed && parsed.tabs && parsed.tabs.length) {
           state = parsed;
+          // Backfill a date on tabs saved before this field existed.
+          state.tabs.forEach(function (t) { if (!t.date) t.date = todayISO(); });
           return;
         }
       }
@@ -343,6 +376,8 @@
     el.studentGroup.value = tab.student.group || "";
     el.studentLevel.value = tab.student.level || "";
     el.studentUnit.value = tab.student.unit || "";
+    el.assessmentDate.value = tab.date || "";
+    el.tutorName.value = tutorName; // global — same on every tab
     el.notes.value = tab.notes || "";
   }
 
@@ -418,6 +453,7 @@
           level: tab.student.level,
           unit: tab.student.unit
         },
+        date: tab.date,
         sliders: tab.sliders.map(function (i) {
           return { libId: i.libId, value: i.value, overrides: Object.assign({}, i.overrides) };
         }),
@@ -637,6 +673,7 @@
     loadLibrary();
     loadState();
     loadRoster();
+    loadTutorName();
 
     el = {
       tabBar: document.getElementById("tabBar"),
@@ -646,6 +683,8 @@
       studentGroup: document.getElementById("studentGroup"),
       studentLevel: document.getElementById("studentLevel"),
       studentUnit: document.getElementById("studentUnit"),
+      tutorName: document.getElementById("tutorName"),
+      assessmentDate: document.getElementById("assessmentDate"),
       pickerSearch: document.getElementById("pickerSearch"),
       pickerList: document.getElementById("pickerList"),
       btnAddCustom: document.getElementById("btnAddCustom"),
@@ -685,6 +724,18 @@
     bindHeaderField(el.studentGroup, "group");
     bindHeaderField(el.studentLevel, "level");
     bindHeaderField(el.studentUnit, "unit");
+
+    el.assessmentDate.addEventListener("input", function () {
+      activeTab().date = el.assessmentDate.value;
+      saveStateDebounced();
+    });
+
+    // Tutor name is global, not per-tab — it's the same person writing
+    // every piece of feedback, so it's set once and remembered everywhere.
+    el.tutorName.addEventListener("input", function () {
+      tutorName = el.tutorName.value;
+      saveTutorName();
+    });
 
     el.notes.addEventListener("input", function () {
       activeTab().notes = el.notes.value;
@@ -950,6 +1001,7 @@
     renderAll: function () { renderAll(); },
     getRoster: function () { return roster; },
     buildVirtualTabsForSelected: buildVirtualTabsForSelected,
+    getTutorName: function () { return tutorName; },
     _init: init
   };
 })();

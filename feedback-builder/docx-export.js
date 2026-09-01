@@ -18,10 +18,21 @@
     }
   };
 
+  var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
   function fmtDate(d) {
     d = d || new Date();
-    var months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-    return d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear();
+    return d.getDate() + " " + MONTHS[d.getMonth()] + " " + d.getFullYear();
+  }
+
+  // tab.date is stored as an ISO "YYYY-MM-DD" (from <input type="date">).
+  // Falls back to today if a tab predates this field or was left blank.
+  function fmtStoredDate(iso) {
+    if (iso) {
+      var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+      if (m) return Number(m[3]) + " " + MONTHS[Number(m[2]) - 1] + " " + m[1];
+    }
+    return fmtDate();
   }
 
   function safeFilePart(s) {
@@ -68,12 +79,13 @@
       });
     }
 
+    var tutorName = (window.FeedbackApp && window.FeedbackApp.getTutorName && window.FeedbackApp.getTutorName()) || "";
     var detailsTable = new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       rows: [
         new TableRow({ children: [headerCell("Student Name", 25), valueCell(tab.student.name, 25), headerCell("Group", 25), valueCell(tab.student.group, 25)] }),
         new TableRow({ children: [headerCell("Level", 25), valueCell(tab.student.level, 25), headerCell("Unit Reference", 25), valueCell(tab.student.unit, 25)] }),
-        new TableRow({ children: [headerCell("Date", 25), valueCell(fmtDate(), 25), headerCell("Criteria Assessed", 25), valueCell(String(tab.sliders.length), 25)] })
+        new TableRow({ children: [headerCell("Tutor / Assessor", 25), valueCell(tutorName, 25), headerCell("Date", 25), valueCell(fmtStoredDate(tab.date), 25)] })
       ]
     });
 
