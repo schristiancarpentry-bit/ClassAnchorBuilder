@@ -394,6 +394,42 @@ input.gauge::-moz-range-thumb {
 .export-status { font-size: 0.85rem; color: var(--steel); font-weight: 600; }
 .export-status.error { color: var(--not-met); }
 
+/* ---------------- class roster ---------------- */
+.roster-card .hint { margin: -6px 0 16px; }
+.roster-add-row { display: flex; gap: 16px; align-items: flex-end; margin-bottom: 12px; }
+.roster-paste-col { flex: 1; }
+.roster-paste-col textarea { font-family: var(--font-mono); font-size: 0.85rem; }
+.roster-group-col { width: 220px; flex-shrink: 0; }
+@media (max-width: 700px) {
+  .roster-add-row { flex-direction: column; align-items: stretch; }
+  .roster-group-col { width: auto; }
+}
+#btnAddRoster { margin-bottom: 18px; }
+
+.roster-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.roster-toolbar #rosterSearch { max-width: 280px; }
+.roster-count { font-size: 0.8rem; font-weight: 700; color: var(--brass-dk); white-space: nowrap; }
+
+.roster-list { max-height: 420px; overflow-y: auto; padding-right: 4px; border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; }
+.roster-group { border-bottom: 1px solid #f0eee6; padding-bottom: 4px; margin-bottom: 4px; }
+.roster-group:last-child { border-bottom: none; }
+.roster-group-head { display: flex; align-items: center; gap: 10px; padding: 8px 2px 4px; }
+.roster-group-head h4 {
+  font-family: var(--font-display); font-size: 0.85rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--steel); margin: 0;
+}
+.roster-group-count { color: var(--soft); font-weight: 500; text-transform: none; letter-spacing: 0; }
+
+.roster-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 2px; border-bottom: 1px solid #f7f5ef;
+}
+.roster-row:last-child { border-bottom: none; }
+.roster-name { flex: 1; font-size: 0.9rem; font-weight: 600; }
+.roster-exported-tag { color: var(--exceeding); background: #e6f3ea; }
+
+.roster-export { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 16px; }
+
 /* ---------------- modal ---------------- */
 .modal-backdrop {
   position: fixed; inset: 0; background: rgba(22,33,31,0.55);

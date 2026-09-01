@@ -71,6 +71,51 @@
   }
 
   // ---------------------------------------------------------------------
+  // Class roster — a class list a tutor pastes in once and reuses across
+  // many feedback-writing sessions, independent of the assessment tabs.
+  // ---------------------------------------------------------------------
+  var ROSTER_KEY = "fb_roster_v1";
+  var roster = []; // [{ id, name, group, selected, lastExported }]
+
+  function loadRoster() {
+    try {
+      var raw = localStorage.getItem(ROSTER_KEY);
+      if (raw) roster = JSON.parse(raw) || [];
+    } catch (e) {
+      console.warn("Could not load class roster", e);
+    }
+  }
+
+  function saveRoster() {
+    try {
+      localStorage.setItem(ROSTER_KEY, JSON.stringify(roster));
+    } catch (e) {
+      console.warn("Could not save class roster", e);
+    }
+  }
+
+  function parseNameLines(text) {
+    return String(text || "")
+      .split(/\r\n|\r|\n/)
+      .map(function (s) { return s.trim(); })
+      .filter(Boolean);
+  }
+
+  function addRosterBatch(names, group) {
+    var g = (group || "").trim();
+    names.forEach(function (name) {
+      var exists = roster.some(function (r) { return r.name === name && r.group === g; });
+      if (exists) return;
+      roster.push({ id: uid("student"), name: name, group: g, selected: false, lastExported: null });
+    });
+    saveRoster();
+  }
+
+  function rosterGroupKey(r) {
+    return r.group && r.group.trim() ? r.group.trim() : "No Group";
+  }
+
+  // ---------------------------------------------------------------------
   // App state (tabs)
   // ---------------------------------------------------------------------
   var state = { tabs: [], activeTabId: null };
@@ -301,6 +346,81 @@
     el.notes.value = tab.notes || "";
   }
 
+  function renderRoster() {
+    var q = (el.rosterSearch.value || "").toLowerCase().trim();
+    var list = roster.filter(function (r) {
+      if (!q) return true;
+      return (r.name + " " + r.group).toLowerCase().indexOf(q) !== -1;
+    });
+    var byGroup = {};
+    var order = [];
+    list.forEach(function (r) {
+      var g = rosterGroupKey(r);
+      if (!byGroup[g]) { byGroup[g] = []; order.push(g); }
+      byGroup[g].push(r);
+    });
+    order.sort(function (a, b) { return a === "No Group" ? 1 : b === "No Group" ? -1 : a.localeCompare(b); });
+
+    var html = "";
+    order.forEach(function (g) {
+      var items = byGroup[g];
+      var allSelected = items.every(function (r) { return r.selected; });
+      html += '<div class="roster-group">';
+      html += '<div class="roster-group-head">';
+      html += '<label class="picker-check" title="Select everyone in ' + esc(g) + '">' +
+        '<input type="checkbox" data-select-group="' + esc(g) + '"' + (allSelected ? " checked" : "") + " />" +
+        '<span class="picker-check-box" aria-hidden="true"></span></label>';
+      html += "<h4>" + esc(g) + ' <span class="roster-group-count">(' + items.length + ")</span></h4>";
+      html += "</div>";
+      items.forEach(function (r) {
+        html +=
+          '<div class="roster-row" data-id="' + r.id + '">' +
+          '<label class="picker-check"><input type="checkbox" data-select-student="' + r.id + '"' + (r.selected ? " checked" : "") + ' />' +
+          '<span class="picker-check-box" aria-hidden="true"></span></label>' +
+          '<span class="roster-name">' + esc(r.name) + "</span>" +
+          (r.lastExported ? '<span class="tag roster-exported-tag" title="Exported ' + esc(new Date(r.lastExported).toLocaleString()) + '">exported</span>' : "") +
+          '<button type="button" class="link-btn" data-rename-student="' + r.id + '">Rename</button>' +
+          '<button type="button" class="link-btn" data-regroup-student="' + r.id + '">Move Group</button>' +
+          '<button type="button" class="btn-icon" data-remove-student="' + r.id + '" title="Remove from roster">&#128465;</button>' +
+          "</div>";
+      });
+      html += "</div>";
+    });
+    if (!html) {
+      html = roster.length
+        ? '<p class="empty-hint">No students match your search.</p>'
+        : '<p class="empty-hint">No students in your roster yet. Paste a class list above to get started.</p>';
+    }
+    el.rosterList.innerHTML = html;
+
+    var selectedCount = roster.filter(function (r) { return r.selected; }).length;
+    el.rosterSelectedCount.textContent = selectedCount + (selectedCount === 1 ? " student selected" : " students selected");
+    el.btnExportRoster.disabled = selectedCount === 0;
+  }
+
+  // Builds tab-shaped objects (same shape buildSummary/buildTabSection
+  // expect) from the currently active tab's feedback template, one per
+  // selected roster student — so the export machinery for tabs can be
+  // reused unchanged for a roster batch export.
+  function buildVirtualTabsForSelected() {
+    var tab = activeTab();
+    return roster.filter(function (r) { return r.selected; }).map(function (r) {
+      return {
+        student: {
+          name: r.name,
+          group: r.group || tab.student.group,
+          level: tab.student.level,
+          unit: tab.student.unit
+        },
+        sliders: tab.sliders.map(function (i) {
+          return { libId: i.libId, value: i.value, overrides: Object.assign({}, i.overrides) };
+        }),
+        notes: tab.notes,
+        summaryOverride: tab.summaryOverride
+      };
+    });
+  }
+
   function renderAll() {
     var tab = activeTab();
     state.activeTabId = tab.id;
@@ -510,6 +630,7 @@
   function init() {
     loadLibrary();
     loadState();
+    loadRoster();
 
     el = {
       tabBar: document.getElementById("tabBar"),
@@ -538,7 +659,14 @@
       modalSave: document.getElementById("modalSave"),
       modalCancel: document.getElementById("modalCancel"),
       modalDelete: document.getElementById("modalDelete"),
-      modalResetDefault: document.getElementById("modalResetDefault")
+      modalResetDefault: document.getElementById("modalResetDefault"),
+      rosterPaste: document.getElementById("rosterPaste"),
+      rosterGroupInput: document.getElementById("rosterGroupInput"),
+      btnAddRoster: document.getElementById("btnAddRoster"),
+      rosterSearch: document.getElementById("rosterSearch"),
+      rosterSelectedCount: document.getElementById("rosterSelectedCount"),
+      rosterList: document.getElementById("rosterList"),
+      btnExportRoster: document.getElementById("btnExportRoster")
     };
 
     // Populate category <select> in modal
@@ -712,7 +840,87 @@
       });
     });
 
+    // ---- Class roster ----
+    el.btnAddRoster.addEventListener("click", function () {
+      var names = parseNameLines(el.rosterPaste.value);
+      if (!names.length) {
+        window.alert("Paste at least one student name (one per line) first.");
+        return;
+      }
+      addRosterBatch(names, el.rosterGroupInput.value);
+      el.rosterPaste.value = "";
+      renderRoster();
+    });
+
+    el.rosterSearch.addEventListener("input", renderRoster);
+
+    el.rosterList.addEventListener("change", function (e) {
+      var studentBox = e.target.closest("[data-select-student]");
+      if (studentBox) {
+        var r = roster.find(function (x) { return x.id === studentBox.getAttribute("data-select-student"); });
+        if (r) r.selected = studentBox.checked;
+        saveRoster();
+        renderRoster();
+        return;
+      }
+      var groupBox = e.target.closest("[data-select-group]");
+      if (groupBox) {
+        var g = groupBox.getAttribute("data-select-group");
+        var checked = groupBox.checked;
+        roster.forEach(function (x) { if (rosterGroupKey(x) === g) x.selected = checked; });
+        saveRoster();
+        renderRoster();
+      }
+    });
+
+    el.rosterList.addEventListener("click", function (e) {
+      var renameBtn = e.target.closest("[data-rename-student]");
+      if (renameBtn) {
+        var r1 = roster.find(function (x) { return x.id === renameBtn.getAttribute("data-rename-student"); });
+        if (r1) {
+          var newName = window.prompt("Rename student:", r1.name);
+          if (newName != null && newName.trim()) { r1.name = newName.trim(); saveRoster(); renderRoster(); }
+        }
+        return;
+      }
+      var regroupBtn = e.target.closest("[data-regroup-student]");
+      if (regroupBtn) {
+        var r2 = roster.find(function (x) { return x.id === regroupBtn.getAttribute("data-regroup-student"); });
+        if (r2) {
+          var newGroup = window.prompt("Move to which group?", r2.group || "");
+          if (newGroup != null) { r2.group = newGroup.trim(); saveRoster(); renderRoster(); }
+        }
+        return;
+      }
+      var removeBtn = e.target.closest("[data-remove-student]");
+      if (removeBtn) {
+        var id = removeBtn.getAttribute("data-remove-student");
+        roster = roster.filter(function (x) { return x.id !== id; });
+        saveRoster();
+        renderRoster();
+      }
+    });
+
+    el.btnExportRoster.addEventListener("click", function () {
+      var virtualTabs = buildVirtualTabsForSelected();
+      if (!virtualTabs.length) return;
+      var groups = Array.from(new Set(virtualTabs.map(function (t) { return t.student.group; }).filter(Boolean)));
+      var base = groups.length === 1 ? groups[0] : "Selected Students";
+      window.FeedbackExport.exportAllTabs(
+        virtualTabs,
+        getLibraryMap(),
+        buildSummary,
+        function (t) { return t.student.name; },
+        { filenameBase: base, docTitle: "Practical Assessment Feedback — " + base }
+      );
+      var now = Date.now();
+      roster.forEach(function (r) { if (r.selected) r.lastExported = now; });
+      saveRoster();
+      renderRoster();
+    });
+
     renderAll();
+    renderRoster();
   }
 
   if (document.readyState === "loading") {
@@ -733,6 +941,8 @@
     newTab: newTab,
     closeTab: closeTab,
     renderAll: function () { renderAll(); },
+    getRoster: function () { return roster; },
+    buildVirtualTabsForSelected: buildVirtualTabsForSelected,
     _init: init
   };
 })();

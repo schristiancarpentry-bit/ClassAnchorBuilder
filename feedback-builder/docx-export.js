@@ -216,9 +216,12 @@
     }
   }
 
-  function exportAllTabs(tabs, libMap, buildSummary, titleFn) {
+  function exportAllTabs(tabs, libMap, buildSummary, titleFn, opts) {
     var docx = window.docx;
     if (!docx) { withStatus("Word export library failed to load.", true); return; }
+    opts = opts || {};
+    var filenameBase = opts.filenameBase || "All Students";
+    var docTitle = opts.docTitle || "Practical Assessment Feedback — All Students";
     withStatus("Building combined Word document…", false);
     try {
       var sections = tabs.map(function (tab, i) {
@@ -227,11 +230,11 @@
       });
       var doc = new docx.Document({
         creator: "ClassAnchor Feedback Builder",
-        title: "Practical Assessment Feedback — All Students",
+        title: docTitle,
         sections: sections
       });
       docx.Packer.toBlob(doc).then(function (blob) {
-        var name = "Feedback - All Students.docx";
+        var name = "Feedback - " + safeFilePart(filenameBase) + ".docx";
         downloadBlob(blob, name);
         withStatus("Downloaded " + name, false);
       }).catch(function (err) {

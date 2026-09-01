@@ -84,6 +84,36 @@
     <textarea id="notesArea" rows="5" placeholder="Any extra context, targets or comments for this student…"></textarea>
   </section>
 
+  <section class="card roster-card">
+    <h2>Class Roster &amp; Batch Export</h2>
+    <p class="hint">Paste your class list once (one student per line), tick who this feedback applies to, and export them all as separate pages in a single Word document.</p>
+
+    <div class="roster-add">
+      <div class="roster-add-row">
+        <div class="roster-paste-col">
+          <label for="rosterPaste">Paste student names (one per line)</label>
+          <textarea id="rosterPaste" rows="4" placeholder="Jamie Ellis&#10;Priya Shah&#10;Alex Carter"></textarea>
+        </div>
+        <div class="roster-group-col">
+          <label for="rosterGroupInput">Group</label>
+          <input id="rosterGroupInput" type="text" placeholder="e.g. Plumbing L2 AM" />
+        </div>
+      </div>
+      <button type="button" id="btnAddRoster" class="btn btn-primary">+ Add to Roster</button>
+    </div>
+
+    <div class="roster-toolbar">
+      <input id="rosterSearch" type="search" placeholder="Search roster…" />
+      <span id="rosterSelectedCount" class="roster-count">0 selected</span>
+    </div>
+    <div id="rosterList" class="roster-list"></div>
+
+    <div class="roster-export">
+      <button type="button" id="btnExportRoster" class="btn btn-primary btn-lg" disabled>Export Feedback to Selected Students (.docx)</button>
+      <span class="export-status" hidden></span>
+    </div>
+  </section>
+
   <div class="export-bar">
     <button type="button" class="btn btn-primary btn-lg btn-export-tab">Export This Student (.docx)</button>
     <button type="button" class="btn btn-ghost btn-export-all">Export All Tabs Combined (.docx)</button>

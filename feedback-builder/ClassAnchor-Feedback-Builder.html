@@ -405,6 +405,42 @@ input.gauge::-moz-range-thumb {
 .export-status { font-size: 0.85rem; color: var(--steel); font-weight: 600; }
 .export-status.error { color: var(--not-met); }
 
+/* ---------------- class roster ---------------- */
+.roster-card .hint { margin: -6px 0 16px; }
+.roster-add-row { display: flex; gap: 16px; align-items: flex-end; margin-bottom: 12px; }
+.roster-paste-col { flex: 1; }
+.roster-paste-col textarea { font-family: var(--font-mono); font-size: 0.85rem; }
+.roster-group-col { width: 220px; flex-shrink: 0; }
+@media (max-width: 700px) {
+  .roster-add-row { flex-direction: column; align-items: stretch; }
+  .roster-group-col { width: auto; }
+}
+#btnAddRoster { margin-bottom: 18px; }
+
+.roster-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.roster-toolbar #rosterSearch { max-width: 280px; }
+.roster-count { font-size: 0.8rem; font-weight: 700; color: var(--brass-dk); white-space: nowrap; }
+
+.roster-list { max-height: 420px; overflow-y: auto; padding-right: 4px; border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; }
+.roster-group { border-bottom: 1px solid #f0eee6; padding-bottom: 4px; margin-bottom: 4px; }
+.roster-group:last-child { border-bottom: none; }
+.roster-group-head { display: flex; align-items: center; gap: 10px; padding: 8px 2px 4px; }
+.roster-group-head h4 {
+  font-family: var(--font-display); font-size: 0.85rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--steel); margin: 0;
+}
+.roster-group-count { color: var(--soft); font-weight: 500; text-transform: none; letter-spacing: 0; }
+
+.roster-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 2px; border-bottom: 1px solid #f7f5ef;
+}
+.roster-row:last-child { border-bottom: none; }
+.roster-name { flex: 1; font-size: 0.9rem; font-weight: 600; }
+.roster-exported-tag { color: var(--exceeding); background: #e6f3ea; }
+
+.roster-export { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 16px; }
+
 /* ---------------- modal ---------------- */
 .modal-backdrop {
   position: fixed; inset: 0; background: rgba(22,33,31,0.55);
@@ -508,6 +544,36 @@ input.gauge::-moz-range-thumb {
   <section class="card notes-card">
     <h2>Additional Notes</h2>
     <textarea id="notesArea" rows="5" placeholder="Any extra context, targets or comments for this student…"></textarea>
+  </section>
+
+  <section class="card roster-card">
+    <h2>Class Roster &amp; Batch Export</h2>
+    <p class="hint">Paste your class list once (one student per line), tick who this feedback applies to, and export them all as separate pages in a single Word document.</p>
+
+    <div class="roster-add">
+      <div class="roster-add-row">
+        <div class="roster-paste-col">
+          <label for="rosterPaste">Paste student names (one per line)</label>
+          <textarea id="rosterPaste" rows="4" placeholder="Jamie Ellis&#10;Priya Shah&#10;Alex Carter"></textarea>
+        </div>
+        <div class="roster-group-col">
+          <label for="rosterGroupInput">Group</label>
+          <input id="rosterGroupInput" type="text" placeholder="e.g. Plumbing L2 AM" />
+        </div>
+      </div>
+      <button type="button" id="btnAddRoster" class="btn btn-primary">+ Add to Roster</button>
+    </div>
+
+    <div class="roster-toolbar">
+      <input id="rosterSearch" type="search" placeholder="Search roster…" />
+      <span id="rosterSelectedCount" class="roster-count">0 selected</span>
+    </div>
+    <div id="rosterList" class="roster-list"></div>
+
+    <div class="roster-export">
+      <button type="button" id="btnExportRoster" class="btn btn-primary btn-lg" disabled>Export Feedback to Selected Students (.docx)</button>
+      <span class="export-status" hidden></span>
+    </div>
   </section>
 
   <div class="export-bar">
@@ -21092,9 +21158,12 @@ var __async = (__this, __arguments, generator) => {
     }
   }
 
-  function exportAllTabs(tabs, libMap, buildSummary, titleFn) {
+  function exportAllTabs(tabs, libMap, buildSummary, titleFn, opts) {
     var docx = window.docx;
     if (!docx) { withStatus("Word export library failed to load.", true); return; }
+    opts = opts || {};
+    var filenameBase = opts.filenameBase || "All Students";
+    var docTitle = opts.docTitle || "Practical Assessment Feedback — All Students";
     withStatus("Building combined Word document…", false);
     try {
       var sections = tabs.map(function (tab, i) {
@@ -21103,11 +21172,11 @@ var __async = (__this, __arguments, generator) => {
       });
       var doc = new docx.Document({
         creator: "ClassAnchor Feedback Builder",
-        title: "Practical Assessment Feedback — All Students",
+        title: docTitle,
         sections: sections
       });
       docx.Packer.toBlob(doc).then(function (blob) {
-        var name = "Feedback - All Students.docx";
+        var name = "Feedback - " + safeFilePart(filenameBase) + ".docx";
         downloadBlob(blob, name);
         withStatus("Downloaded " + name, false);
       }).catch(function (err) {
@@ -21195,6 +21264,51 @@ var __async = (__this, __arguments, generator) => {
     var map = {};
     getLibraryList().forEach(function (s) { map[s.id] = s; });
     return map;
+  }
+
+  // ---------------------------------------------------------------------
+  // Class roster — a class list a tutor pastes in once and reuses across
+  // many feedback-writing sessions, independent of the assessment tabs.
+  // ---------------------------------------------------------------------
+  var ROSTER_KEY = "fb_roster_v1";
+  var roster = []; // [{ id, name, group, selected, lastExported }]
+
+  function loadRoster() {
+    try {
+      var raw = localStorage.getItem(ROSTER_KEY);
+      if (raw) roster = JSON.parse(raw) || [];
+    } catch (e) {
+      console.warn("Could not load class roster", e);
+    }
+  }
+
+  function saveRoster() {
+    try {
+      localStorage.setItem(ROSTER_KEY, JSON.stringify(roster));
+    } catch (e) {
+      console.warn("Could not save class roster", e);
+    }
+  }
+
+  function parseNameLines(text) {
+    return String(text || "")
+      .split(/\r\n|\r|\n/)
+      .map(function (s) { return s.trim(); })
+      .filter(Boolean);
+  }
+
+  function addRosterBatch(names, group) {
+    var g = (group || "").trim();
+    names.forEach(function (name) {
+      var exists = roster.some(function (r) { return r.name === name && r.group === g; });
+      if (exists) return;
+      roster.push({ id: uid("student"), name: name, group: g, selected: false, lastExported: null });
+    });
+    saveRoster();
+  }
+
+  function rosterGroupKey(r) {
+    return r.group && r.group.trim() ? r.group.trim() : "No Group";
   }
 
   // ---------------------------------------------------------------------
@@ -21428,6 +21542,81 @@ var __async = (__this, __arguments, generator) => {
     el.notes.value = tab.notes || "";
   }
 
+  function renderRoster() {
+    var q = (el.rosterSearch.value || "").toLowerCase().trim();
+    var list = roster.filter(function (r) {
+      if (!q) return true;
+      return (r.name + " " + r.group).toLowerCase().indexOf(q) !== -1;
+    });
+    var byGroup = {};
+    var order = [];
+    list.forEach(function (r) {
+      var g = rosterGroupKey(r);
+      if (!byGroup[g]) { byGroup[g] = []; order.push(g); }
+      byGroup[g].push(r);
+    });
+    order.sort(function (a, b) { return a === "No Group" ? 1 : b === "No Group" ? -1 : a.localeCompare(b); });
+
+    var html = "";
+    order.forEach(function (g) {
+      var items = byGroup[g];
+      var allSelected = items.every(function (r) { return r.selected; });
+      html += '<div class="roster-group">';
+      html += '<div class="roster-group-head">';
+      html += '<label class="picker-check" title="Select everyone in ' + esc(g) + '">' +
+        '<input type="checkbox" data-select-group="' + esc(g) + '"' + (allSelected ? " checked" : "") + " />" +
+        '<span class="picker-check-box" aria-hidden="true"></span></label>';
+      html += "<h4>" + esc(g) + ' <span class="roster-group-count">(' + items.length + ")</span></h4>";
+      html += "</div>";
+      items.forEach(function (r) {
+        html +=
+          '<div class="roster-row" data-id="' + r.id + '">' +
+          '<label class="picker-check"><input type="checkbox" data-select-student="' + r.id + '"' + (r.selected ? " checked" : "") + ' />' +
+          '<span class="picker-check-box" aria-hidden="true"></span></label>' +
+          '<span class="roster-name">' + esc(r.name) + "</span>" +
+          (r.lastExported ? '<span class="tag roster-exported-tag" title="Exported ' + esc(new Date(r.lastExported).toLocaleString()) + '">exported</span>' : "") +
+          '<button type="button" class="link-btn" data-rename-student="' + r.id + '">Rename</button>' +
+          '<button type="button" class="link-btn" data-regroup-student="' + r.id + '">Move Group</button>' +
+          '<button type="button" class="btn-icon" data-remove-student="' + r.id + '" title="Remove from roster">&#128465;</button>' +
+          "</div>";
+      });
+      html += "</div>";
+    });
+    if (!html) {
+      html = roster.length
+        ? '<p class="empty-hint">No students match your search.</p>'
+        : '<p class="empty-hint">No students in your roster yet. Paste a class list above to get started.</p>';
+    }
+    el.rosterList.innerHTML = html;
+
+    var selectedCount = roster.filter(function (r) { return r.selected; }).length;
+    el.rosterSelectedCount.textContent = selectedCount + (selectedCount === 1 ? " student selected" : " students selected");
+    el.btnExportRoster.disabled = selectedCount === 0;
+  }
+
+  // Builds tab-shaped objects (same shape buildSummary/buildTabSection
+  // expect) from the currently active tab's feedback template, one per
+  // selected roster student — so the export machinery for tabs can be
+  // reused unchanged for a roster batch export.
+  function buildVirtualTabsForSelected() {
+    var tab = activeTab();
+    return roster.filter(function (r) { return r.selected; }).map(function (r) {
+      return {
+        student: {
+          name: r.name,
+          group: r.group || tab.student.group,
+          level: tab.student.level,
+          unit: tab.student.unit
+        },
+        sliders: tab.sliders.map(function (i) {
+          return { libId: i.libId, value: i.value, overrides: Object.assign({}, i.overrides) };
+        }),
+        notes: tab.notes,
+        summaryOverride: tab.summaryOverride
+      };
+    });
+  }
+
   function renderAll() {
     var tab = activeTab();
     state.activeTabId = tab.id;
@@ -21637,6 +21826,7 @@ var __async = (__this, __arguments, generator) => {
   function init() {
     loadLibrary();
     loadState();
+    loadRoster();
 
     el = {
       tabBar: document.getElementById("tabBar"),
@@ -21665,7 +21855,14 @@ var __async = (__this, __arguments, generator) => {
       modalSave: document.getElementById("modalSave"),
       modalCancel: document.getElementById("modalCancel"),
       modalDelete: document.getElementById("modalDelete"),
-      modalResetDefault: document.getElementById("modalResetDefault")
+      modalResetDefault: document.getElementById("modalResetDefault"),
+      rosterPaste: document.getElementById("rosterPaste"),
+      rosterGroupInput: document.getElementById("rosterGroupInput"),
+      btnAddRoster: document.getElementById("btnAddRoster"),
+      rosterSearch: document.getElementById("rosterSearch"),
+      rosterSelectedCount: document.getElementById("rosterSelectedCount"),
+      rosterList: document.getElementById("rosterList"),
+      btnExportRoster: document.getElementById("btnExportRoster")
     };
 
     // Populate category <select> in modal
@@ -21839,7 +22036,87 @@ var __async = (__this, __arguments, generator) => {
       });
     });
 
+    // ---- Class roster ----
+    el.btnAddRoster.addEventListener("click", function () {
+      var names = parseNameLines(el.rosterPaste.value);
+      if (!names.length) {
+        window.alert("Paste at least one student name (one per line) first.");
+        return;
+      }
+      addRosterBatch(names, el.rosterGroupInput.value);
+      el.rosterPaste.value = "";
+      renderRoster();
+    });
+
+    el.rosterSearch.addEventListener("input", renderRoster);
+
+    el.rosterList.addEventListener("change", function (e) {
+      var studentBox = e.target.closest("[data-select-student]");
+      if (studentBox) {
+        var r = roster.find(function (x) { return x.id === studentBox.getAttribute("data-select-student"); });
+        if (r) r.selected = studentBox.checked;
+        saveRoster();
+        renderRoster();
+        return;
+      }
+      var groupBox = e.target.closest("[data-select-group]");
+      if (groupBox) {
+        var g = groupBox.getAttribute("data-select-group");
+        var checked = groupBox.checked;
+        roster.forEach(function (x) { if (rosterGroupKey(x) === g) x.selected = checked; });
+        saveRoster();
+        renderRoster();
+      }
+    });
+
+    el.rosterList.addEventListener("click", function (e) {
+      var renameBtn = e.target.closest("[data-rename-student]");
+      if (renameBtn) {
+        var r1 = roster.find(function (x) { return x.id === renameBtn.getAttribute("data-rename-student"); });
+        if (r1) {
+          var newName = window.prompt("Rename student:", r1.name);
+          if (newName != null && newName.trim()) { r1.name = newName.trim(); saveRoster(); renderRoster(); }
+        }
+        return;
+      }
+      var regroupBtn = e.target.closest("[data-regroup-student]");
+      if (regroupBtn) {
+        var r2 = roster.find(function (x) { return x.id === regroupBtn.getAttribute("data-regroup-student"); });
+        if (r2) {
+          var newGroup = window.prompt("Move to which group?", r2.group || "");
+          if (newGroup != null) { r2.group = newGroup.trim(); saveRoster(); renderRoster(); }
+        }
+        return;
+      }
+      var removeBtn = e.target.closest("[data-remove-student]");
+      if (removeBtn) {
+        var id = removeBtn.getAttribute("data-remove-student");
+        roster = roster.filter(function (x) { return x.id !== id; });
+        saveRoster();
+        renderRoster();
+      }
+    });
+
+    el.btnExportRoster.addEventListener("click", function () {
+      var virtualTabs = buildVirtualTabsForSelected();
+      if (!virtualTabs.length) return;
+      var groups = Array.from(new Set(virtualTabs.map(function (t) { return t.student.group; }).filter(Boolean)));
+      var base = groups.length === 1 ? groups[0] : "Selected Students";
+      window.FeedbackExport.exportAllTabs(
+        virtualTabs,
+        getLibraryMap(),
+        buildSummary,
+        function (t) { return t.student.name; },
+        { filenameBase: base, docTitle: "Practical Assessment Feedback — " + base }
+      );
+      var now = Date.now();
+      roster.forEach(function (r) { if (r.selected) r.lastExported = now; });
+      saveRoster();
+      renderRoster();
+    });
+
     renderAll();
+    renderRoster();
   }
 
   if (document.readyState === "loading") {
@@ -21860,6 +22137,8 @@ var __async = (__this, __arguments, generator) => {
     newTab: newTab,
     closeTab: closeTab,
     renderAll: function () { renderAll(); },
+    getRoster: function () { return roster; },
+    buildVirtualTabsForSelected: buildVirtualTabsForSelected,
     _init: init
   };
 })();
