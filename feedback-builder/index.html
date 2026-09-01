@@ -28,6 +28,13 @@
   </div>
 </div>
 
+<div class="quick-export">
+  <span class="quick-export-label">Same feedback, different student?</span>
+  <button type="button" class="btn btn-primary btn-export-tab" title="Export this tab as a Word document">Export This Student (.docx)</button>
+  <button type="button" class="btn btn-ghost btn-export-all" title="Export every tab into one combined Word document">Export All Tabs Combined (.docx)</button>
+  <span class="export-status" hidden></span>
+</div>
+
 <main class="layout">
 
   <section class="card student-card">
@@ -78,9 +85,9 @@
   </section>
 
   <div class="export-bar">
-    <button type="button" id="btnExportTab" class="btn btn-primary btn-lg">Export This Student (.docx)</button>
-    <button type="button" id="btnExportAll" class="btn btn-ghost">Export All Tabs Combined (.docx)</button>
-    <span id="exportStatus" class="export-status" hidden></span>
+    <button type="button" class="btn btn-primary btn-lg btn-export-tab">Export This Student (.docx)</button>
+    <button type="button" class="btn btn-ghost btn-export-all">Export All Tabs Combined (.docx)</button>
+    <span class="export-status" hidden></span>
   </div>
 
 </main>

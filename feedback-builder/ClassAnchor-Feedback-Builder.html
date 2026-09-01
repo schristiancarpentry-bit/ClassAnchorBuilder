@@ -128,6 +128,30 @@ a { color: var(--brass-dk); }
 .tab-close:hover { background: var(--not-met); color: #fff; }
 .tabstrip-actions { display: flex; gap: 8px; padding-bottom: 6px; }
 
+/* quick-export: repeats the export buttons at the very top of the page, so a
+   tutor giving the same feedback to a new student can just change the name
+   above and export without scrolling down to the full form. */
+.quick-export {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: #fbf7ee;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.quick-export-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--brass-dk);
+}
+@media (max-width: 700px) {
+  .quick-export-label { flex-basis: 100%; }
+}
+
 /* ---------------- layout ---------------- */
 .layout {
   max-width: 1240px;
@@ -430,6 +454,13 @@ input.gauge::-moz-range-thumb {
   </div>
 </div>
 
+<div class="quick-export">
+  <span class="quick-export-label">Same feedback, different student?</span>
+  <button type="button" class="btn btn-primary btn-export-tab" title="Export this tab as a Word document">Export This Student (.docx)</button>
+  <button type="button" class="btn btn-ghost btn-export-all" title="Export every tab into one combined Word document">Export All Tabs Combined (.docx)</button>
+  <span class="export-status" hidden></span>
+</div>
+
 <main class="layout">
 
   <section class="card student-card">
@@ -480,9 +511,9 @@ input.gauge::-moz-range-thumb {
   </section>
 
   <div class="export-bar">
-    <button type="button" id="btnExportTab" class="btn btn-primary btn-lg">Export This Student (.docx)</button>
-    <button type="button" id="btnExportAll" class="btn btn-ghost">Export All Tabs Combined (.docx)</button>
-    <span id="exportStatus" class="export-status" hidden></span>
+    <button type="button" class="btn btn-primary btn-lg btn-export-tab">Export This Student (.docx)</button>
+    <button type="button" class="btn btn-ghost btn-export-all">Export All Tabs Combined (.docx)</button>
+    <span class="export-status" hidden></span>
   </div>
 
 </main>
@@ -21025,17 +21056,21 @@ var __async = (__this, __arguments, generator) => {
     return children;
   }
 
-  function withStatus(statusEl, msg, isError) {
-    if (!statusEl) return;
-    statusEl.hidden = false;
-    statusEl.textContent = msg;
-    statusEl.className = "export-status" + (isError ? " error" : "");
+  // Broadcasts to every status indicator on the page (there's one by each set
+  // of export buttons — top and bottom — so whichever one the tutor used
+  // shows the result without needing to scroll to the other).
+  function withStatus(msg, isError) {
+    document.querySelectorAll(".export-status").forEach(function (statusEl) {
+      statusEl.hidden = false;
+      statusEl.textContent = msg;
+      statusEl.className = "export-status" + (isError ? " error" : "");
+    });
   }
 
-  function exportTab(tab, libMap, buildSummary, statusEl) {
+  function exportTab(tab, libMap, buildSummary) {
     var docx = window.docx;
-    if (!docx) { withStatus(statusEl, "Word export library failed to load.", true); return; }
-    withStatus(statusEl, "Building Word document…", false);
+    if (!docx) { withStatus("Word export library failed to load.", true); return; }
+    withStatus("Building Word document…", false);
     var summary = buildSummary(tab);
     try {
       var doc = new docx.Document({
@@ -21046,21 +21081,21 @@ var __async = (__this, __arguments, generator) => {
       docx.Packer.toBlob(doc).then(function (blob) {
         var name = safeFilePart(tab.student.name || "Assessment") + " - Feedback.docx";
         downloadBlob(blob, name);
-        withStatus(statusEl, "Downloaded " + name, false);
+        withStatus("Downloaded " + name, false);
       }).catch(function (err) {
         console.error(err);
-        withStatus(statusEl, "Could not build the Word document: " + err.message, true);
+        withStatus("Could not build the Word document: " + err.message, true);
       });
     } catch (err) {
       console.error(err);
-      withStatus(statusEl, "Could not build the Word document: " + err.message, true);
+      withStatus("Could not build the Word document: " + err.message, true);
     }
   }
 
-  function exportAllTabs(tabs, libMap, buildSummary, statusEl, titleFn) {
+  function exportAllTabs(tabs, libMap, buildSummary, titleFn) {
     var docx = window.docx;
-    if (!docx) { withStatus(statusEl, "Word export library failed to load.", true); return; }
-    withStatus(statusEl, "Building combined Word document…", false);
+    if (!docx) { withStatus("Word export library failed to load.", true); return; }
+    withStatus("Building combined Word document…", false);
     try {
       var sections = tabs.map(function (tab, i) {
         var summary = buildSummary(tab);
@@ -21074,14 +21109,14 @@ var __async = (__this, __arguments, generator) => {
       docx.Packer.toBlob(doc).then(function (blob) {
         var name = "Feedback - All Students.docx";
         downloadBlob(blob, name);
-        withStatus(statusEl, "Downloaded " + name, false);
+        withStatus("Downloaded " + name, false);
       }).catch(function (err) {
         console.error(err);
-        withStatus(statusEl, "Could not build the Word document: " + err.message, true);
+        withStatus("Could not build the Word document: " + err.message, true);
       });
     } catch (err) {
       console.error(err);
-      withStatus(statusEl, "Could not build the Word document: " + err.message, true);
+      withStatus("Could not build the Word document: " + err.message, true);
     }
   }
 
@@ -21621,8 +21656,6 @@ var __async = (__this, __arguments, generator) => {
       summaryEditor: document.getElementById("summaryEditor"),
       summaryTextarea: document.getElementById("summaryTextarea"),
       notes: document.getElementById("notesArea"),
-      btnExportTab: document.getElementById("btnExportTab"),
-      btnExportAll: document.getElementById("btnExportAll"),
       modalBackdrop: document.getElementById("modalBackdrop"),
       modalTitle: document.getElementById("modalTitle"),
       modalName: document.getElementById("modalName"),
@@ -21632,8 +21665,7 @@ var __async = (__this, __arguments, generator) => {
       modalSave: document.getElementById("modalSave"),
       modalCancel: document.getElementById("modalCancel"),
       modalDelete: document.getElementById("modalDelete"),
-      modalResetDefault: document.getElementById("modalResetDefault"),
-      exportStatus: document.getElementById("exportStatus")
+      modalResetDefault: document.getElementById("modalResetDefault")
     };
 
     // Populate category <select> in modal
@@ -21793,11 +21825,18 @@ var __async = (__this, __arguments, generator) => {
       renderSummary(tab);
     });
 
-    el.btnExportTab.addEventListener("click", function () {
-      window.FeedbackExport.exportTab(activeTab(), getLibraryMap(), buildSummary, el.exportStatus);
+    // There are two sets of export buttons (a quick-access pair at the top of
+    // the page, and the full pair at the bottom of the form) — wire up every
+    // instance of each, so a tutor who never scrolls down can still export.
+    document.querySelectorAll(".btn-export-tab").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        window.FeedbackExport.exportTab(activeTab(), getLibraryMap(), buildSummary);
+      });
     });
-    el.btnExportAll.addEventListener("click", function () {
-      window.FeedbackExport.exportAllTabs(state.tabs, getLibraryMap(), buildSummary, el.exportStatus, function (tab, i) { return tabDisplayTitle(tab, i); });
+    document.querySelectorAll(".btn-export-all").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        window.FeedbackExport.exportAllTabs(state.tabs, getLibraryMap(), buildSummary, function (tab, i) { return tabDisplayTitle(tab, i); });
+      });
     });
 
     renderAll();

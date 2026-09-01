@@ -529,8 +529,6 @@
       summaryEditor: document.getElementById("summaryEditor"),
       summaryTextarea: document.getElementById("summaryTextarea"),
       notes: document.getElementById("notesArea"),
-      btnExportTab: document.getElementById("btnExportTab"),
-      btnExportAll: document.getElementById("btnExportAll"),
       modalBackdrop: document.getElementById("modalBackdrop"),
       modalTitle: document.getElementById("modalTitle"),
       modalName: document.getElementById("modalName"),
@@ -540,8 +538,7 @@
       modalSave: document.getElementById("modalSave"),
       modalCancel: document.getElementById("modalCancel"),
       modalDelete: document.getElementById("modalDelete"),
-      modalResetDefault: document.getElementById("modalResetDefault"),
-      exportStatus: document.getElementById("exportStatus")
+      modalResetDefault: document.getElementById("modalResetDefault")
     };
 
     // Populate category <select> in modal
@@ -701,11 +698,18 @@
       renderSummary(tab);
     });
 
-    el.btnExportTab.addEventListener("click", function () {
-      window.FeedbackExport.exportTab(activeTab(), getLibraryMap(), buildSummary, el.exportStatus);
+    // There are two sets of export buttons (a quick-access pair at the top of
+    // the page, and the full pair at the bottom of the form) — wire up every
+    // instance of each, so a tutor who never scrolls down can still export.
+    document.querySelectorAll(".btn-export-tab").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        window.FeedbackExport.exportTab(activeTab(), getLibraryMap(), buildSummary);
+      });
     });
-    el.btnExportAll.addEventListener("click", function () {
-      window.FeedbackExport.exportAllTabs(state.tabs, getLibraryMap(), buildSummary, el.exportStatus, function (tab, i) { return tabDisplayTitle(tab, i); });
+    document.querySelectorAll(".btn-export-all").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        window.FeedbackExport.exportAllTabs(state.tabs, getLibraryMap(), buildSummary, function (tab, i) { return tabDisplayTitle(tab, i); });
+      });
     });
 
     renderAll();

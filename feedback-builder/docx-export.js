@@ -180,17 +180,21 @@
     return children;
   }
 
-  function withStatus(statusEl, msg, isError) {
-    if (!statusEl) return;
-    statusEl.hidden = false;
-    statusEl.textContent = msg;
-    statusEl.className = "export-status" + (isError ? " error" : "");
+  // Broadcasts to every status indicator on the page (there's one by each set
+  // of export buttons — top and bottom — so whichever one the tutor used
+  // shows the result without needing to scroll to the other).
+  function withStatus(msg, isError) {
+    document.querySelectorAll(".export-status").forEach(function (statusEl) {
+      statusEl.hidden = false;
+      statusEl.textContent = msg;
+      statusEl.className = "export-status" + (isError ? " error" : "");
+    });
   }
 
-  function exportTab(tab, libMap, buildSummary, statusEl) {
+  function exportTab(tab, libMap, buildSummary) {
     var docx = window.docx;
-    if (!docx) { withStatus(statusEl, "Word export library failed to load.", true); return; }
-    withStatus(statusEl, "Building Word document…", false);
+    if (!docx) { withStatus("Word export library failed to load.", true); return; }
+    withStatus("Building Word document…", false);
     var summary = buildSummary(tab);
     try {
       var doc = new docx.Document({
@@ -201,21 +205,21 @@
       docx.Packer.toBlob(doc).then(function (blob) {
         var name = safeFilePart(tab.student.name || "Assessment") + " - Feedback.docx";
         downloadBlob(blob, name);
-        withStatus(statusEl, "Downloaded " + name, false);
+        withStatus("Downloaded " + name, false);
       }).catch(function (err) {
         console.error(err);
-        withStatus(statusEl, "Could not build the Word document: " + err.message, true);
+        withStatus("Could not build the Word document: " + err.message, true);
       });
     } catch (err) {
       console.error(err);
-      withStatus(statusEl, "Could not build the Word document: " + err.message, true);
+      withStatus("Could not build the Word document: " + err.message, true);
     }
   }
 
-  function exportAllTabs(tabs, libMap, buildSummary, statusEl, titleFn) {
+  function exportAllTabs(tabs, libMap, buildSummary, titleFn) {
     var docx = window.docx;
-    if (!docx) { withStatus(statusEl, "Word export library failed to load.", true); return; }
-    withStatus(statusEl, "Building combined Word document…", false);
+    if (!docx) { withStatus("Word export library failed to load.", true); return; }
+    withStatus("Building combined Word document…", false);
     try {
       var sections = tabs.map(function (tab, i) {
         var summary = buildSummary(tab);
@@ -229,14 +233,14 @@
       docx.Packer.toBlob(doc).then(function (blob) {
         var name = "Feedback - All Students.docx";
         downloadBlob(blob, name);
-        withStatus(statusEl, "Downloaded " + name, false);
+        withStatus("Downloaded " + name, false);
       }).catch(function (err) {
         console.error(err);
-        withStatus(statusEl, "Could not build the Word document: " + err.message, true);
+        withStatus("Could not build the Word document: " + err.message, true);
       });
     } catch (err) {
       console.error(err);
-      withStatus(statusEl, "Could not build the Word document: " + err.message, true);
+      withStatus("Could not build the Word document: " + err.message, true);
     }
   }
 

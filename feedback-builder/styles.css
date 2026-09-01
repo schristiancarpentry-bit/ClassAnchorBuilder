@@ -117,6 +117,30 @@ a { color: var(--brass-dk); }
 .tab-close:hover { background: var(--not-met); color: #fff; }
 .tabstrip-actions { display: flex; gap: 8px; padding-bottom: 6px; }
 
+/* quick-export: repeats the export buttons at the very top of the page, so a
+   tutor giving the same feedback to a new student can just change the name
+   above and export without scrolling down to the full form. */
+.quick-export {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: #fbf7ee;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.quick-export-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--brass-dk);
+}
+@media (max-width: 700px) {
+  .quick-export-label { flex-basis: 100%; }
+}
+
 /* ---------------- layout ---------------- */
 .layout {
   max-width: 1240px;
