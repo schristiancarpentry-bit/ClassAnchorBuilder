@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ClassAnchor Wiring Trainer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  :root {
+    --accent: #c89b39; --accent-dk: #a07820;
+    --bg: #f5f4f2; --surface: #fff; --border: #ddd8d0;
+    --text: #1a1a1a; --soft: #6b7280;
+    --done: #22a06b; --danger: #c0392b;
+    --radius: 10px; --shadow: 0 2px 10px rgba(0,0,0,0.10);
+    --wire-l: #6b3f1f; --wire-n: #1a56c4; --wire-e-a: #2e8b3d; --wire-e-b: #f2d200;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { font-family: system-ui, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
+
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 22px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow); position: relative; z-index: 20; }
+  .topbar-title { font-size: 1.08rem; font-weight: 800; color: var(--accent); }
+  .topbar-sub { font-size: 0.78rem; color: var(--soft); }
+  .topbar-back { margin-left: auto; font-size: 0.8rem; color: var(--soft); text-decoration: none; border: 1px solid var(--border); padding: 6px 12px; border-radius: 7px; background: var(--bg); }
+  .topbar-back:hover { color: var(--accent-dk); border-color: var(--accent); }
+
+  .app { display: flex; height: calc(100vh - 61px); min-height: 500px; }
+
+  .sidebar { width: 300px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 16px; }
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+  .panel { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 14px; background: var(--surface); }
+  .panel h3 { margin: 0 0 10px; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--soft); }
+  .panel p.hint { font-size: 0.76rem; color: var(--soft); margin: 6px 0 0; line-height: 1.4; }
+
+  .palette-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .palette-item {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 6px;
+    cursor: grab; background: var(--bg); user-select: none; -webkit-user-select: none;
+    touch-action: none; text-align: center;
+  }
+  .palette-item:active { cursor: grabbing; background: #eee; }
+  .palette-badge { width: 34px; height: 34px; border-radius: 7px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800; }
+  .palette-label { font-size: 0.68rem; font-weight: 600; line-height: 1.2; }
+  .drag-ghost {
+    position: fixed; z-index: 999; pointer-events: none; transform: translate(-50%, -50%);
+    background: var(--accent); color: #fff; font-size: 0.72rem; font-weight: 700;
+    padding: 6px 10px; border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.3); opacity: 0.92;
+  }
+
+  .color-row { display: flex; gap: 8px; }
+  .wire-color-btn {
+    flex: 1; padding: 10px 4px; border-radius: 8px; border: 2px solid var(--border);
+    cursor: pointer; font-size: 0.68rem; font-weight: 700; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,0.4);
+  }
+  .wire-color-btn[data-color="L"] { background: #6b3f1f; }
+  .wire-color-btn[data-color="N"] { background: #1a56c4; }
+  .wire-color-btn[data-color="E"] { background: repeating-linear-gradient(45deg, #2e8b3d 0 6px, #f2d200 6px 12px); color: #142; text-shadow: none; }
+  .wire-color-btn.active { border-color: #ffb020; box-shadow: 0 0 0 2px #ffb02055; }
+  .armed-status { font-size: 0.76rem; margin-top: 8px; color: var(--soft); min-height: 16px; }
+
+  .btn { padding: 8px 12px; border-radius: 7px; border: none; font-size: 0.8rem; font-weight: 600; cursor: pointer; width: 100%; margin-top: 6px; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-dk); }
+  .btn-ghost { background: var(--border); color: var(--text); }
+  .btn-ghost:hover { background: #ccc; }
+  .btn-danger { background: #fbe6e3; color: var(--danger); }
+  .btn-danger:hover { background: #f6cfc9; }
+  .btn-row { display: flex; gap: 6px; }
+  .btn-row .btn { margin-top: 0; }
+
+  select, input[type=text] { width: 100%; padding: 7px 9px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.82rem; margin-top: 6px; }
+
+  .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.76rem; margin-top: 6px; }
+  .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 1.5px solid #333; }
+  .legend-dot.l { background: #7a4a20; }
+  .legend-dot.n { background: #1a56c4; }
+  .legend-dot.e { background: #2e8b3d; border-color: #f2d200; border-width: 2px; }
+
+  .status-strip { padding: 9px 18px; font-size: 0.82rem; background: #fffbeb; border-bottom: 1px solid var(--border); color: #7a5a00; min-height: 20px; }
+
+  .board-scroll { flex: 1; overflow: auto; background: #8a6a44; padding: 20px; }
+  #boardSvg { display: block; background: #d9b98a; touch-action: none; box-shadow: 0 4px 20px rgba(0,0,0,0.35); border-radius: 4px; }
+
+  .term circle:first-child { cursor: crosshair; }
+  .comp-group { cursor: grab; }
+
+  #actionStatus { font-size: 0.72rem; color: var(--soft); margin-top: 10px; min-height: 14px; }
+  .footnote { font-size: 0.68rem; color: var(--soft); margin-top: 4px; }
+
+  @media (max-width: 860px) {
+    .app { flex-direction: column; height: auto; }
+    .sidebar { width: auto; border-right: none; border-bottom: 1px solid var(--border); max-height: 46vh; }
+    .board-scroll { height: 60vh; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-title">⚡ ClassAnchor Wiring Trainer</div>
+    <div class="topbar-sub">City &amp; Guilds Electrical Installation — interactive practical wiring board</div>
+  </div>
+  <a class="topbar-back" href="index.html">← Tracker Builder</a>
+</div>
+
+<div class="status-strip" id="statusStrip">Drag components from the panel on the left onto the board, then pick a wire colour to start wiring.</div>
+
+<div class="app">
+
+  <div class="sidebar">
+
+    <div class="panel">
+      <h3>Components</h3>
+      <div class="palette-grid" id="paletteGrid"></div>
+      <p class="hint">Drag a component onto the board with your mouse or finger. Drag any placed component to reposition it — connected wires follow automatically.</p>
+    </div>
+
+    <div class="panel">
+      <h3>Wire Colour</h3>
+      <div class="color-row">
+        <button type="button" class="wire-color-btn" data-color="L">LINE</button>
+        <button type="button" class="wire-color-btn" data-color="N">NEUTRAL</button>
+        <button type="button" class="wire-color-btn" data-color="E">EARTH</button>
+      </div>
+      <div class="armed-status" id="armedStatus">No colour selected.</div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-ghost" id="undoPointBtn">Undo point</button>
+        <button type="button" class="btn btn-ghost" id="cancelWireBtn">Cancel wire</button>
+      </div>
+      <p class="hint">Click/tap a terminal to start, click points to route the cable around the board, then click/tap a terminal to finish. Esc or right-click also cancels.</p>
+    </div>
+
+    <div class="panel">
+      <h3>Board Tools</h3>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.78rem;font-weight:600;">
+        <input type="checkbox" id="snapToggle" checked style="width:auto;margin:0;" /> Snap to grid
+      </label>
+      <div class="btn-row" style="margin-top:8px;">
+        <button type="button" class="btn btn-danger" id="deleteSelBtn">Delete selected</button>
+        <button type="button" class="btn btn-ghost" id="clearWiresBtn">Clear wires</button>
+      </div>
+      <button type="button" class="btn btn-ghost" id="newBoardBtn">New blank board</button>
+    </div>
+
+    <div class="panel">
+      <h3>Lessons</h3>
+      <input type="text" id="lessonName" placeholder="Lesson name, e.g. Two-way lighting" />
+      <button type="button" class="btn btn-primary" id="saveLessonBtn">Save as lesson</button>
+      <select id="lessonSelect"></select>
+      <div class="btn-row" style="margin-top:6px;">
+        <button type="button" class="btn btn-ghost" id="loadLessonBtn">Load</button>
+        <button type="button" class="btn btn-danger" id="deleteLessonBtn">Delete</button>
+      </div>
+      <p class="hint">Saved in this browser only. Use Export JSON below to back up or move a lesson to another computer.</p>
+    </div>
+
+    <div class="panel">
+      <h3>Import / Export</h3>
+      <div class="btn-row">
+        <button type="button" class="btn btn-ghost" id="exportJsonBtn">Export JSON</button>
+        <button type="button" class="btn btn-ghost" id="importJsonBtn">Import JSON</button>
+      </div>
+      <input type="file" id="importJsonFile" accept="application/json" style="display:none;" />
+      <button type="button" class="btn btn-ghost" id="exportPngBtn">Export as image (PNG)</button>
+    </div>
+
+    <div class="panel">
+      <h3>Colour Key</h3>
+      <div class="legend-row"><span class="legend-dot l"></span> Line / Live — Brown</div>
+      <div class="legend-row"><span class="legend-dot n"></span> Neutral — Blue</div>
+      <div class="legend-row"><span class="legend-dot e"></span> Earth / CPC — Green &amp; Yellow</div>
+      <p class="hint">The ring around each terminal shows the correct wire colour for that terminal — a quick visual check for students.</p>
+      <div id="actionStatus"></div>
+    </div>
+
+  </div>
+
+  <div class="main">
+    <div class="board-scroll" id="boardScroll">
+      <svg id="boardSvg" xmlns="http://www.w3.org/2000/svg" width="1500" height="950" viewBox="0 0 1500 950">
+        <defs>
+          <pattern id="boardGrid" width="50" height="50" patternUnits="userSpaceOnUse">
+            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#c49a68" stroke-width="1" opacity="0.5"/>
+          </pattern>
+        </defs>
+        <rect x="0" y="0" width="1500" height="950" fill="#d9b98a"/>
+        <rect x="0" y="0" width="1500" height="950" fill="url(#boardGrid)"/>
+        <g id="wiresLayer"></g>
+        <g id="componentsLayer"></g>
+        <g id="previewLayer"></g>
+      </svg>
+    </div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+// ── BOARD CONSTANTS ──────────────────────────────────────────────────────────
+
+const BOARD_W = 1500, BOARD_H = 950, MARGIN = 20, GRID = 10;
+const COLOR_HEX = { L: '#6b3f1f', N: '#1a56c4', E: '#2e8b3d' };
+const COLOR_NAME = { L: 'LINE (Brown)', N: 'NEUTRAL (Blue)', E: 'EARTH (Green/Yellow)' };
+
+// ── COMPONENT DEFINITIONS ────────────────────────────────────────────────────
+// Each terminal: {x,y} = position relative to the component's top-left corner.
+// kind: 'L' | 'N' | 'E' drives the coloured terminal ring.
+// la/ldx/ldy: label text-anchor + offset from the terminal dot.
+
+const COMP_DEFS = {
+
+  mainsSupply: {
+    label: 'Mains Supply / Meter', badge: 'MS', w: 100, h: 60,
+    body: () => `
+      <rect x="0" y="0" width="100" height="60" rx="6" fill="#eef2f6" stroke="#333" stroke-width="1.5"/>
+      <text x="50" y="20" text-anchor="middle" font-size="10" font-weight="700" fill="#333">MAINS</text>
+      <text x="50" y="33" text-anchor="middle" font-size="10" font-weight="700" fill="#333">SUPPLY</text>
+      <text x="50" y="46" text-anchor="middle" font-size="7" fill="#666">(meter tails)</text>`,
+    terminals: {
+      L: { x: 100, y: 14, kind: 'L', text: 'L', la: 'end', ldx: -9, ldy: 3 },
+      N: { x: 100, y: 30, kind: 'N', text: 'N', la: 'end', ldx: -9, ldy: 3 },
+      E: { x: 100, y: 46, kind: 'E', text: 'E', la: 'end', ldx: -9, ldy: 3 },
+    }
+  },
+
+  consumerUnit: {
+    label: 'Consumer Unit (DP Main Switch, 32A + 6A MCB)', badge: 'CU', w: 300, h: 150,
+    body: () => `
+      <rect x="0" y="0" width="300" height="150" rx="8" fill="#f7f4ec" stroke="#333" stroke-width="1.5"/>
+      <text x="150" y="16" text-anchor="middle" font-size="11" font-weight="800" fill="#333">CONSUMER UNIT</text>
+      <rect x="8" y="24" width="90" height="34" rx="4" fill="#e2e2e2" stroke="#555"/>
+      <text x="53" y="38" text-anchor="middle" font-size="7.5" font-weight="700" fill="#333">MAIN SWITCH</text>
+      <text x="53" y="50" text-anchor="middle" font-size="7.5" fill="#333">DOUBLE POLE</text>
+      <rect x="104" y="24" width="90" height="34" rx="4" fill="#fde9c8" stroke="#a07820"/>
+      <text x="149" y="38" text-anchor="middle" font-size="7.5" font-weight="700" fill="#7a4a00">MCB1 32A</text>
+      <text x="149" y="50" text-anchor="middle" font-size="7.5" fill="#7a4a00">SOCKETS</text>
+      <rect x="200" y="24" width="90" height="34" rx="4" fill="#fde9c8" stroke="#a07820"/>
+      <text x="245" y="38" text-anchor="middle" font-size="7.5" font-weight="700" fill="#7a4a00">MCB2 6A</text>
+      <text x="245" y="50" text-anchor="middle" font-size="7.5" fill="#7a4a00">LIGHTS</text>
+      <text x="38" y="98" text-anchor="middle" font-size="7.5" font-weight="700" fill="#333">SUPPLY IN</text>
+      <rect x="12" y="104" width="52" height="16" rx="3" fill="#ddd" stroke="#888"/>
+      <text x="106" y="98" text-anchor="middle" font-size="7.5" font-weight="700" fill="#333">CIRCUIT OUT</text>
+      <rect x="85" y="104" width="42" height="16" rx="3" fill="#ddd" stroke="#888"/>
+      <text x="175" y="98" text-anchor="middle" font-size="7.5" font-weight="700" fill="#333">NEUTRAL BAR</text>
+      <rect x="142" y="104" width="67" height="16" rx="3" fill="#ddd" stroke="#888"/>
+      <text x="250" y="98" text-anchor="middle" font-size="7.5" font-weight="700" fill="#333">EARTH BAR</text>
+      <rect x="217" y="104" width="67" height="16" rx="3" fill="#ddd" stroke="#888"/>`,
+    terminals: {
+      mainsL:   { x: 20,  y: 112, kind: 'L', text: 'L',     la: 'middle', ldx: 0, ldy: 13 },
+      mainsN:   { x: 38,  y: 112, kind: 'N', text: 'N',     la: 'middle', ldx: 0, ldy: 13 },
+      mainsE:   { x: 56,  y: 112, kind: 'E', text: 'E',     la: 'middle', ldx: 0, ldy: 13 },
+      socketsL: { x: 95,  y: 112, kind: 'L', text: '32A L', la: 'middle', ldx: 0, ldy: 13 },
+      lightsL:  { x: 118, y: 112, kind: 'L', text: '6A L',  la: 'middle', ldx: 0, ldy: 13 },
+      n1: { x: 150, y: 112, kind: 'N', text: 'N', la: 'middle', ldx: 0, ldy: 13 },
+      n2: { x: 167, y: 112, kind: 'N', text: 'N', la: 'middle', ldx: 0, ldy: 13 },
+      n3: { x: 184, y: 112, kind: 'N', text: 'N', la: 'middle', ldx: 0, ldy: 13 },
+      n4: { x: 201, y: 112, kind: 'N', text: 'N', la: 'middle', ldx: 0, ldy: 13 },
+      e1: { x: 225, y: 112, kind: 'E', text: 'E', la: 'middle', ldx: 0, ldy: 13 },
+      e2: { x: 242, y: 112, kind: 'E', text: 'E', la: 'middle', ldx: 0, ldy: 13 },
+      e3: { x: 259, y: 112, kind: 'E', text: 'E', la: 'middle', ldx: 0, ldy: 13 },
+      e4: { x: 276, y: 112, kind: 'E', text: 'E', la: 'middle', ldx: 0, ldy: 13 },
+    }
+  },
+
+  ceilingRose: {
+    label: 'Ceiling Rose (loop-in)', badge: 'CR', w: 95, h: 115,
+    body: () => `
+      <circle cx="47" cy="42" r="34" fill="#fbf8f2" stroke="#333" stroke-width="1.5"/>
+      <circle cx="47" cy="42" r="9" fill="#fff2c9" stroke="#a07820" stroke-width="1.2"/>
+      <line x1="41" y1="36" x2="53" y2="48" stroke="#a07820" stroke-width="1"/>
+      <line x1="53" y1="36" x2="41" y2="48" stroke="#a07820" stroke-width="1"/>
+      <text x="47" y="109" text-anchor="middle" font-size="8" font-weight="700" fill="#333">CEILING ROSE</text>`,
+    terminals: {
+      L:  { x: 8,  y: 42, kind: 'L', text: 'L',  la: 'end',    ldx: -9, ldy: 3,  hint: 'loop-in line' },
+      SW: { x: 86, y: 42, kind: 'L', text: 'SW', la: 'start',  ldx: 9,  ldy: 3,  hint: 'switch line' },
+      N:  { x: 27, y: 80, kind: 'N', text: 'N',  la: 'middle', ldx: 0,  ldy: 13, hint: 'neutral' },
+      E:  { x: 67, y: 80, kind: 'E', text: 'E',  la: 'middle', ldx: 0,  ldy: 13, hint: 'earth' },
+    }
+  },
+
+  twoWaySwitch: {
+    label: '2-Way Switch', badge: 'SW', w: 76, h: 76,
+    body: () => `
+      <rect x="4" y="4" width="68" height="68" rx="8" fill="#f7f4ec" stroke="#333" stroke-width="1.5"/>
+      <rect x="16" y="16" width="24" height="44" rx="3" fill="#e9e6dd" stroke="#666"/>
+      <circle cx="28" cy="30" r="5" fill="#fff" stroke="#333"/>
+      <text x="38" y="13" text-anchor="middle" font-size="7.5" font-weight="700" fill="#333">2-WAY</text>
+      <text x="38" y="73" text-anchor="middle" font-size="7" fill="#333">SWITCH</text>`,
+    terminals: {
+      COM: { x: 72, y: 20, kind: 'L', text: 'COM', la: 'end', ldx: -9, ldy: 3 },
+      L1:  { x: 72, y: 38, kind: 'L', text: 'L1',  la: 'end', ldx: -9, ldy: 3 },
+      L2:  { x: 72, y: 56, kind: 'L', text: 'L2',  la: 'end', ldx: -9, ldy: 3 },
+    }
+  },
+
+  socketSingle: {
+    label: 'Single Socket Outlet', badge: 'SK', w: 76, h: 76,
+    body: () => `
+      <rect x="4" y="4" width="68" height="68" rx="8" fill="#f7f4ec" stroke="#333" stroke-width="1.5"/>
+      <ellipse cx="26" cy="30" rx="4" ry="6" fill="#fff" stroke="#333"/>
+      <ellipse cx="26" cy="46" rx="4" ry="6" fill="#fff" stroke="#333"/>
+      <circle cx="26" cy="38" r="3" fill="#fff" stroke="#333"/>
+      <text x="38" y="13" text-anchor="middle" font-size="7.5" font-weight="700" fill="#333">SOCKET</text>
+      <text x="38" y="73" text-anchor="middle" font-size="7" fill="#333">13A SP</text>`,
+    terminals: {
+      L: { x: 72, y: 18, kind: 'L', text: 'L', la: 'end', ldx: -9, ldy: 3 },
+      E: { x: 72, y: 38, kind: 'E', text: 'E', la: 'end', ldx: -9, ldy: 3 },
+      N: { x: 72, y: 58, kind: 'N', text: 'N', la: 'end', ldx: -9, ldy: 3 },
+    }
+  },
+
+  dpSwitch20A: {
+    label: '20A Double-Pole Switch', badge: 'DP', w: 130, h: 76,
+    body: () => `
+      <rect x="4" y="4" width="122" height="68" rx="8" fill="#f7f4ec" stroke="#333" stroke-width="1.5"/>
+      <rect x="52" y="26" width="26" height="24" rx="4" fill="#e9e6dd" stroke="#666"/>
+      <text x="65" y="13" text-anchor="middle" font-size="7.5" font-weight="700" fill="#333">20A DP SWITCH</text>
+      <text x="65" y="70" text-anchor="middle" font-size="6.5" fill="#333">(switches L + N)</text>`,
+    terminals: {
+      L_IN:  { x: 6,   y: 20, kind: 'L', text: 'L IN',  la: 'start', ldx: 9,  ldy: 3 },
+      N_IN:  { x: 6,   y: 38, kind: 'N', text: 'N IN',  la: 'start', ldx: 9,  ldy: 3 },
+      E:     { x: 6,   y: 56, kind: 'E', text: 'E',     la: 'start', ldx: 9,  ldy: 3 },
+      L_OUT: { x: 124, y: 20, kind: 'L', text: 'L OUT', la: 'end',   ldx: -9, ldy: 3 },
+      N_OUT: { x: 124, y: 38, kind: 'N', text: 'N OUT', la: 'end',   ldx: -9, ldy: 3 },
+    }
+  },
+
+  fusedSpur: {
+    label: 'Switched Fused Spur', badge: 'FS', w: 140, h: 76,
+    body: () => `
+      <rect x="4" y="4" width="132" height="68" rx="8" fill="#f7f4ec" stroke="#333" stroke-width="1.5"/>
+      <rect x="50" y="24" width="40" height="28" rx="4" fill="#fde9c8" stroke="#a07820"/>
+      <text x="70" y="36" text-anchor="middle" font-size="7" font-weight="700" fill="#7a4a00">FUSE</text>
+      <text x="70" y="46" text-anchor="middle" font-size="6.5" fill="#7a4a00">+ switch</text>
+      <text x="70" y="13" text-anchor="middle" font-size="7.5" font-weight="700" fill="#333">SWITCHED FUSED SPUR</text>`,
+    terminals: {
+      L_IN:  { x: 6,   y: 16, kind: 'L', text: 'L IN',  la: 'start', ldx: 9,  ldy: 3 },
+      N_IN:  { x: 6,   y: 34, kind: 'N', text: 'N IN',  la: 'start', ldx: 9,  ldy: 3 },
+      E_IN:  { x: 6,   y: 52, kind: 'E', text: 'E IN',  la: 'start', ldx: 9,  ldy: 3 },
+      L_OUT: { x: 134, y: 16, kind: 'L', text: 'L OUT', la: 'end',   ldx: -9, ldy: 3 },
+      N_OUT: { x: 134, y: 34, kind: 'N', text: 'N OUT', la: 'end',   ldx: -9, ldy: 3 },
+      E_OUT: { x: 134, y: 52, kind: 'E', text: 'E OUT', la: 'end',   ldx: -9, ldy: 3 },
+    }
+  },
+
+  junctionBox: {
+    label: 'Junction Box (3-plate / maintenance-free)', badge: 'JB', w: 90, h: 100,
+    body: () => `
+      <circle cx="45" cy="45" r="34" fill="#f7f4ec" stroke="#333" stroke-width="1.5"/>
+      <text x="45" y="42" text-anchor="middle" font-size="7.5" font-weight="700" fill="#333">JUNCTION</text>
+      <text x="45" y="52" text-anchor="middle" font-size="7.5" font-weight="700" fill="#333">BOX</text>`,
+    terminals: {
+      L:  { x: 6,  y: 45, kind: 'L', text: 'L',  la: 'end',    ldx: -9, ldy: 3 },
+      N:  { x: 45, y: 6,  kind: 'N', text: 'N',  la: 'middle', ldx: 0,  ldy: -9 },
+      E:  { x: 84, y: 45, kind: 'E', text: 'E',  la: 'start',  ldx: 9,  ldy: 3 },
+      SW: { x: 45, y: 84, kind: 'L', text: 'SW', la: 'middle', ldx: 0,  ldy: 13 },
+    }
+  },
+};
+
+const PALETTE_ORDER = ['mainsSupply', 'consumerUnit', 'ceilingRose', 'twoWaySwitch', 'socketSingle', 'dpSwitch20A', 'fusedSpur', 'junctionBox'];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+
+let state = { components: [], wires: [] };
+let nextId = 1;
+let selection = null;            // {type:'component'|'wire', id}
+let selectedColor = null;        // 'L' | 'N' | 'E' | null
+let drawing = null;              // {color, from:{compId,key}, points:[{x,y}]}
+let lastPointerPt = null;
+let draggingComp = null;         // {id, offX, offY}
+let snapEnabled = true;
+
+const boardSvg = document.getElementById('boardSvg');
+const componentsG = document.getElementById('componentsLayer');
+const wiresG = document.getElementById('wiresLayer');
+const previewG = document.getElementById('previewLayer');
+const boardScroll = document.getElementById('boardScroll');
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function snap(pt) {
+  if (!snapEnabled) return pt;
+  return { x: Math.round(pt.x / GRID) * GRID, y: Math.round(pt.y / GRID) * GRID };
+}
+
+function findComp(id) { return state.components.find(c => c.id === id); }
+
+function termPos(compId, key) {
+  const comp = findComp(compId);
+  if (!comp) return { x: 0, y: 0 };
+  const t = COMP_DEFS[comp.type].terminals[key];
+  return { x: comp.x + t.x, y: comp.y + t.y };
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+function getBoardPoint(e) {
+  const rect = boardSvg.getBoundingClientRect();
+  const scaleX = BOARD_W / rect.width, scaleY = BOARD_H / rect.height;
+  return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+}
+
+function computeNextId(s) {
+  let max = 0;
+  [...s.components, ...s.wires].forEach(o => {
+    const m = /(\d+)$/.exec(o.id || '');
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  });
+  return max + 1;
+}
+
+function flashStatus(msg) {
+  document.getElementById('actionStatus').textContent = msg;
+}
+
+// ── RENDERING ─────────────────────────────────────────────────────────────────
+
+function renderTerminals(comp, def) {
+  return Object.entries(def.terminals).map(([key, t]) => {
+    const ringFill = t.kind === 'L' ? '#7a4a20' : t.kind === 'N' ? '#1a56c4' : '#2e8b3d';
+    const ringStroke = t.kind === 'E' ? '#f2d200' : '#222';
+    const strokeW = t.kind === 'E' ? 2.5 : 1.5;
+    return `<g data-term="${comp.id}|${key}" class="term">
+      <circle cx="${t.x}" cy="${t.y}" r="12" fill="transparent"></circle>
+      <circle cx="${t.x}" cy="${t.y}" r="5" fill="${ringFill}" stroke="${ringStroke}" stroke-width="${strokeW}"></circle>
+      <text x="${t.x + t.ldx}" y="${t.y + t.ldy}" text-anchor="${t.la}" font-size="7.5" fill="#222" style="pointer-events:none;">${t.text}</text>
+    </g>`;
+  }).join('');
+}
+
+function renderComponents() {
+  componentsG.innerHTML = state.components.map(c => {
+    const def = COMP_DEFS[c.type];
+    const sel = selection && selection.type === 'component' && selection.id === c.id;
+    return `<g class="comp-group" data-comp="${c.id}" transform="translate(${c.x},${c.y})">
+      ${sel ? `<rect x="-5" y="-5" width="${def.w + 10}" height="${def.h + 10}" rx="10" fill="none" stroke="#ffb020" stroke-width="3" stroke-dasharray="6 4"></rect>` : ''}
+      ${def.body(c)}
+      ${renderTerminals(c, def)}
+    </g>`;
+  }).join('');
+}
+
+function wireFullPoints(w) {
+  return [termPos(w.from.compId, w.from.key), ...w.points, termPos(w.to.compId, w.to.key)];
+}
+
+function pathFromPoints(pts) {
+  return 'M ' + pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L ');
+}
+
+function renderWires() {
+  wiresG.innerHTML = state.wires.map(w => {
+    const pts = wireFullPoints(w);
+    const d = pathFromPoints(pts);
+    const isSel = selection && selection.type === 'wire' && selection.id === w.id;
+    const selRing = isSel ? `<path d="${d}" fill="none" stroke="#ffb020" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>` : '';
+    const hit = `<path d="${d}" fill="none" stroke="transparent" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`;
+    const base = `<path d="${d}" fill="none" stroke="${COLOR_HEX[w.color]}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
+    const stripe = w.color === 'E' ? `<path d="${d}" fill="none" stroke="#f2d200" stroke-width="4" stroke-dasharray="9 9" stroke-linecap="butt" stroke-linejoin="round"/>` : '';
+    return `<g data-wire="${w.id}">${selRing}${hit}${base}${stripe}</g>`;
+  }).join('');
+}
+
+function renderPreview() {
+  if (!drawing) { previewG.innerHTML = ''; return; }
+  const startPos = termPos(drawing.from.compId, drawing.from.key);
+  const tail = lastPointerPt ? [lastPointerPt] : [];
+  const pts = [startPos, ...drawing.points, ...tail];
+  const d = pathFromPoints(pts);
+  const c = COLOR_HEX[drawing.color];
+  const dots = drawing.points.map(p => `<circle cx="${p.x}" cy="${p.y}" r="4" fill="${c}" stroke="#fff" stroke-width="1"/>`).join('');
+  const ring = `<circle cx="${startPos.x}" cy="${startPos.y}" r="10" fill="none" stroke="${c}" stroke-width="2" stroke-dasharray="3 2"/>`;
+  previewG.innerHTML = `<path d="${d}" fill="none" stroke="${c}" stroke-width="3" stroke-dasharray="6 5" opacity="0.85"/>${dots}${ring}`;
+}
+
+function updateStatusStrip() {
+  const el = document.getElementById('statusStrip');
+  if (drawing) {
+    const comp = findComp(drawing.from.compId);
+    const label = comp ? `${COMP_DEFS[comp.type].label} (${drawing.from.key})` : 'terminal';
+    el.textContent = `Drawing ${COLOR_NAME[drawing.color]} wire from ${label}. Click the board to add a route point, or click a terminal to finish. Esc / right-click to cancel.`;
+  } else if (selectedColor) {
+    el.textContent = `${COLOR_NAME[selectedColor]} armed — click/tap a terminal to start a wire.`;
+  } else {
+    el.textContent = 'Drag components onto the board, then pick a wire colour to start wiring.';
+  }
+}
+
+function render() {
+  renderComponents();
+  renderWires();
+  renderPreview();
+  updateStatusStrip();
+  document.getElementById('undoPointBtn').disabled = !(drawing && drawing.points.length);
+  document.getElementById('cancelWireBtn').disabled = !drawing;
+}
+
+// ── COMPONENT PLACEMENT / DRAGGING ───────────────────────────────────────────
+
+function addComponent(type, x, y) {
+  const def = COMP_DEFS[type];
+  const id = 'c' + (nextId++);
+  const cx = clamp(x - def.w / 2, MARGIN, BOARD_W - def.w - MARGIN);
+  const cy = clamp(y - def.h / 2, MARGIN, BOARD_H - def.h - MARGIN);
+  state.components.push({ id, type, x: cx, y: cy });
+  selection = { type: 'component', id };
+  render();
+  flashStatus(`Added ${def.label}.`);
+}
+
+// ── WIRE DRAWING ──────────────────────────────────────────────────────────────
+
+function startWire(compId, key, color) {
+  drawing = { color, from: { compId, key }, points: [] };
+  lastPointerPt = null;
+  selection = null;
+  render();
+}
+
+function addWirePoint(pt) {
+  if (!drawing) return;
+  drawing.points.push(snap(pt));
+  render();
+}
+
+function finishWireAt(compId, key) {
+  if (!drawing) return;
+  if (compId === drawing.from.compId && key === drawing.from.key && drawing.points.length === 0) {
+    drawing = null; render(); return;
+  }
+  const wire = { id: 'w' + (nextId++), color: drawing.color, from: drawing.from, to: { compId, key }, points: drawing.points };
+  state.wires.push(wire);
+  drawing = null;
+  render();
+  flashStatus(`Wire added (${COLOR_NAME[wire.color]}).`);
+}
+
+function cancelWire() { if (drawing) { drawing = null; render(); } }
+function undoWirePoint() { if (drawing && drawing.points.length) { drawing.points.pop(); render(); } }
+
+// ── SELECTION / DELETE ────────────────────────────────────────────────────────
+
+function deleteSelection() {
+  if (!selection) { flashStatus('Nothing selected.'); return; }
+  if (selection.type === 'wire') {
+    state.wires = state.wires.filter(w => w.id !== selection.id);
+  } else {
+    state.wires = state.wires.filter(w => w.from.compId !== selection.id && w.to.compId !== selection.id);
+    state.components = state.components.filter(c => c.id !== selection.id);
+  }
+  selection = null;
+  render();
+}
+
+// ── BOARD POINTER HANDLING ───────────────────────────────────────────────────
+
+boardSvg.addEventListener('pointerdown', e => {
+  const pt = getBoardPoint(e);
+  const termEl = e.target.closest('[data-term]');
+
+  if (drawing) {
+    if (termEl) {
+      const [compId, key] = termEl.getAttribute('data-term').split('|');
+      finishWireAt(compId, key);
+    } else {
+      addWirePoint(pt);
+    }
+    e.preventDefault();
+    return;
+  }
+
+  if (termEl) {
+    if (selectedColor) {
+      const [compId, key] = termEl.getAttribute('data-term').split('|');
+      startWire(compId, key, selectedColor);
+    }
+    e.preventDefault();
+    return;
+  }
+
+  const wireEl = e.target.closest('[data-wire]');
+  if (wireEl) {
+    selection = { type: 'wire', id: wireEl.getAttribute('data-wire') };
+    render();
+    return;
+  }
+
+  const compEl = e.target.closest('[data-comp]');
+  if (compEl) {
+    const id = compEl.getAttribute('data-comp');
+    const comp = findComp(id);
+    selection = { type: 'component', id };
+    draggingComp = { id, offX: pt.x - comp.x, offY: pt.y - comp.y };
+    render();
+    return;
+  }
+
+  selection = null;
+  render();
+});
+
+window.addEventListener('pointermove', e => {
+  if (drawing) {
+    lastPointerPt = getBoardPoint(e);
+    renderPreview();
+  } else if (draggingComp) {
+    const pt = getBoardPoint(e);
+    const comp = findComp(draggingComp.id);
+    if (!comp) { draggingComp = null; return; }
+    const def = COMP_DEFS[comp.type];
+    const s = snap({ x: pt.x - draggingComp.offX, y: pt.y - draggingComp.offY });
+    comp.x = clamp(s.x, MARGIN, BOARD_W - def.w - MARGIN);
+    comp.y = clamp(s.y, MARGIN, BOARD_H - def.h - MARGIN);
+    renderComponents();
+    renderWires();
+  }
+});
+
+window.addEventListener('pointerup', () => { draggingComp = null; });
+
+boardSvg.addEventListener('contextmenu', e => { e.preventDefault(); if (drawing) cancelWire(); });
+
+window.addEventListener('keydown', e => {
+  const tag = document.activeElement && document.activeElement.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  if (e.key === 'Escape' && drawing) { cancelWire(); e.preventDefault(); }
+  else if (e.key === 'Delete' || e.key === 'Backspace') { deleteSelection(); e.preventDefault(); }
+});
+
+// ── PALETTE DRAG-AND-DROP ────────────────────────────────────────────────────
+
+function buildPalette() {
+  const grid = document.getElementById('paletteGrid');
+  grid.innerHTML = PALETTE_ORDER.map(type => {
+    const def = COMP_DEFS[type];
+    return `<div class="palette-item" data-type="${type}">
+      <div class="palette-badge">${def.badge}</div>
+      <div class="palette-label">${def.label}</div>
+    </div>`;
+  }).join('');
+
+  grid.addEventListener('pointerdown', e => {
+    const item = e.target.closest('.palette-item');
+    if (!item) return;
+    e.preventDefault();
+    const type = item.dataset.type;
+    const def = COMP_DEFS[type];
+    const ghost = document.createElement('div');
+    ghost.className = 'drag-ghost';
+    ghost.textContent = def.label;
+    document.body.appendChild(ghost);
+    moveGhost(e.clientX, e.clientY);
+
+    function moveGhost(x, y) { ghost.style.left = x + 'px'; ghost.style.top = y + 'px'; }
+    function onMove(ev) { moveGhost(ev.clientX, ev.clientY); }
+    function onUp(ev) {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      ghost.remove();
+      const rect = boardSvg.getBoundingClientRect();
+      if (ev.clientX >= rect.left && ev.clientX <= rect.right && ev.clientY >= rect.top && ev.clientY <= rect.bottom) {
+        const scaleX = BOARD_W / rect.width, scaleY = BOARD_H / rect.height;
+        const x = (ev.clientX - rect.left) * scaleX, y = (ev.clientY - rect.top) * scaleY;
+        addComponent(type, x, y);
+      }
+    }
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  });
+}
+
+// ── WIRE COLOUR BUTTONS / BOARD TOOL BUTTONS ─────────────────────────────────
+
+document.querySelectorAll('.wire-color-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const color = btn.dataset.color;
+    selectedColor = (selectedColor === color) ? null : color;
+    document.querySelectorAll('.wire-color-btn').forEach(b => b.classList.toggle('active', b.dataset.color === selectedColor));
+    document.getElementById('armedStatus').textContent = selectedColor ? `Armed: ${COLOR_NAME[selectedColor]}` : 'No colour selected.';
+    updateStatusStrip();
+  });
+});
+
+document.getElementById('undoPointBtn').addEventListener('click', undoWirePoint);
+document.getElementById('cancelWireBtn').addEventListener('click', cancelWire);
+document.getElementById('deleteSelBtn').addEventListener('click', deleteSelection);
+
+document.getElementById('clearWiresBtn').addEventListener('click', () => {
+  if (!state.wires.length) { flashStatus('No wires to clear.'); return; }
+  if (!confirm('Remove all wires from the board? Components stay in place.')) return;
+  state.wires = [];
+  selection = null;
+  render();
+});
+
+document.getElementById('newBoardBtn').addEventListener('click', () => {
+  if (state.components.length && !confirm('Clear the board? Unsaved changes will be lost.')) return;
+  state = { components: [], wires: [] };
+  selection = null; drawing = null;
+  document.getElementById('lessonName').value = '';
+  render();
+});
+
+document.getElementById('snapToggle').addEventListener('change', e => { snapEnabled = e.target.checked; });
+
+// ── LESSON SAVE / LOAD (localStorage) ────────────────────────────────────────
+
+const LS_KEY = 'ewt_lessons_v1';
+
+function loadLessons() { try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch { return {}; } }
+function persistLessons(l) { localStorage.setItem(LS_KEY, JSON.stringify(l)); }
+
+function refreshLessonSelect() {
+  const lessons = loadLessons();
+  const sel = document.getElementById('lessonSelect');
+  const names = Object.keys(lessons).sort();
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— Select a saved lesson —</option>' +
+    names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  if (names.includes(current)) sel.value = current;
+}
+
+document.getElementById('saveLessonBtn').addEventListener('click', () => {
+  const name = document.getElementById('lessonName').value.trim();
+  if (!name) { alert('Enter a name for this lesson diagram first.'); return; }
+  const lessons = loadLessons();
+  lessons[name] = state;
+  persistLessons(lessons);
+  refreshLessonSelect();
+  document.getElementById('lessonSelect').value = name;
+  flashStatus(`Saved lesson "${name}".`);
+});
+
+document.getElementById('loadLessonBtn').addEventListener('click', () => {
+  const name = document.getElementById('lessonSelect').value;
+  if (!name) { flashStatus('Choose a saved lesson first.'); return; }
+  const lessons = loadLessons();
+  if (!lessons[name]) return;
+  if (!confirm(`Load "${name}"? This replaces the current board.`)) return;
+  state = JSON.parse(JSON.stringify(lessons[name]));
+  nextId = computeNextId(state);
+  selection = null; drawing = null;
+  document.getElementById('lessonName').value = name;
+  render();
+  flashStatus(`Loaded lesson "${name}".`);
+});
+
+document.getElementById('deleteLessonBtn').addEventListener('click', () => {
+  const name = document.getElementById('lessonSelect').value;
+  if (!name) { flashStatus('Choose a saved lesson first.'); return; }
+  if (!confirm(`Delete saved lesson "${name}"? This cannot be undone.`)) return;
+  const lessons = loadLessons();
+  delete lessons[name];
+  persistLessons(lessons);
+  refreshLessonSelect();
+  flashStatus(`Deleted lesson "${name}".`);
+});
+
+// ── IMPORT / EXPORT ───────────────────────────────────────────────────────────
+
+document.getElementById('exportJsonBtn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (document.getElementById('lessonName').value.trim() || 'wiring-diagram').replace(/[^a-z0-9-_]+/gi, '-') + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+document.getElementById('importJsonBtn').addEventListener('click', () => document.getElementById('importJsonFile').click());
+
+document.getElementById('importJsonFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!data.components || !data.wires) throw new Error('Not a valid diagram file.');
+      state = data;
+      nextId = computeNextId(state);
+      selection = null; drawing = null;
+      render();
+      flashStatus('Diagram imported.');
+    } catch (err) {
+      alert('Could not import file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+document.getElementById('exportPngBtn').addEventListener('click', () => {
+  if (drawing) { alert('Finish or cancel the current wire before exporting.'); return; }
+  const savedSel = selection;
+  selection = null;
+  render();
+  const svgStr = new XMLSerializer().serializeToString(boardSvg);
+  selection = savedSel;
+  render();
+
+  const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = BOARD_W; canvas.height = BOARD_H;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+    canvas.toBlob(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = (document.getElementById('lessonName').value.trim() || 'wiring-diagram') + '.png';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+  };
+  img.onerror = () => alert('Could not export image in this browser. Try Export JSON instead.');
+  img.src = url;
+});
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+
+buildPalette();
+refreshLessonSelect();
+render();
+
+</script>
+</body>
+</html>
