@@ -1,0 +1,460 @@
+/* ClassAnchor Feedback Builder — house style
+   Token system grounded in the workshop/measurement subject matter:
+   brass & steel tool tones, an engraved-gauge slider as the signature move. */
+
+:root {
+  --ink: #16211f;
+  --paper: #eef1ef;
+  --surface: #ffffff;
+  --line: #dbd9d0;
+  --soft: #5b6664;
+  --brass: #9c6b22;
+  --brass-dk: #7a5119;
+  --steel: #3c5960;
+  --not-met: #b23a34;
+  --developing: #c07a1f;
+  --meeting: #3c5960;
+  --exceeding: #3f7d52;
+  --radius: 12px;
+  --shadow: 0 2px 14px rgba(22, 33, 31, 0.08);
+  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; overflow-anchor: none; }
+body {
+  margin: 0;
+  /* The app rebuilds #activeList/#pickerList via innerHTML on most actions.
+     Chrome's scroll anchoring tries to compensate for content size changes
+     near the viewport and can misfire on a bulk replace like that, yanking
+     the whole page to an unrelated scroll position. Nothing here depends
+     on that behaviour, so switch it off outright. */
+  overflow-anchor: none;
+  font-family: var(--font-body);
+  background: var(--paper);
+  background-image:
+    linear-gradient(rgba(22,33,31,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(22,33,31,0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+  color: var(--ink);
+}
+
+a { color: var(--brass-dk); }
+
+/* ---------------- topbar ---------------- */
+.topbar {
+  background: var(--ink);
+  color: #f4f1e9;
+  padding: 18px 28px;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  box-shadow: var(--shadow);
+}
+.topbar-mark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: 0.03em;
+  color: #f4f1e9;
+}
+.topbar-mark span { color: var(--brass); }
+.topbar-title { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; letter-spacing: 0.02em; }
+.topbar-sub { font-size: 0.8rem; color: #c9c3b3; }
+
+/* ---------------- tab strip ---------------- */
+.tabstrip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px 0;
+  max-width: 1240px;
+  margin: 0 auto;
+}
+.tab-bar {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  flex: 1;
+  padding-bottom: 2px;
+}
+.tab-btn {
+  font-family: var(--font-body);
+  font-size: 0.86rem;
+  font-weight: 600;
+  background: #e4e1d6;
+  color: var(--soft);
+  border: 1px solid var(--line);
+  border-bottom: none;
+  padding: 9px 10px 9px 14px;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+}
+.tab-btn:hover { background: #d8d4c5; transform: translateY(-1px); }
+.tab-btn.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 -2px 0 var(--brass) inset;
+}
+.tab-close {
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--soft);
+  border-radius: 50%;
+  width: 18px; height: 18px;
+  display: flex; align-items: center; justify-content: center;
+}
+.tab-close:hover { background: var(--not-met); color: #fff; }
+.tabstrip-actions { display: flex; gap: 8px; padding-bottom: 6px; }
+
+/* quick-export: repeats the export buttons at the very top of the page, so a
+   tutor giving the same feedback to a new student can just change the name
+   above and export without scrolling down to the full form. */
+.quick-export {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: #fbf7ee;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.quick-export-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--brass-dk);
+}
+@media (max-width: 700px) {
+  .quick-export-label { flex-basis: 100%; }
+}
+
+/* ---------------- layout ---------------- */
+.layout {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 20px 20px 70px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px 22px;
+}
+.card h2 {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin: 0 0 14px;
+  color: var(--ink);
+  border-bottom: 2px solid var(--line);
+  padding-bottom: 8px;
+}
+
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+label { display: block; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--soft); margin-bottom: 5px; }
+input[type="text"], input:not([type]), input[type="search"], textarea, select {
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: #fbfaf7;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.92rem;
+}
+textarea { resize: vertical; font-family: var(--font-body); }
+input:focus, textarea:focus, select:focus { outline: 2px solid var(--brass); outline-offset: 1px; border-color: var(--brass); }
+
+.workspace {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .workspace { grid-template-columns: 1fr; }
+  .grid-4 { grid-template-columns: 1fr 1fr; }
+}
+
+/* ---------------- buttons ---------------- */
+.btn {
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.86rem;
+  padding: 9px 16px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s, box-shadow 0.15s;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--brass); color: #fff; }
+.btn-primary:hover { background: var(--brass-dk); }
+.btn-ghost { background: #f0eee6; color: var(--ink); border-color: var(--line); }
+.btn-ghost:hover { background: #e5e2d6; }
+.btn-danger { background: var(--not-met); color: #fff; }
+.btn-lg { padding: 12px 22px; font-size: 0.95rem; }
+.btn-icon {
+  background: transparent; border: none; cursor: pointer;
+  color: var(--soft); font-size: 0.95rem; padding: 4px 6px; border-radius: 6px;
+}
+.btn-icon:hover { background: #eee9dc; color: var(--ink); }
+.link-btn { background: none; border: none; color: var(--brass-dk); font-size: 0.8rem; font-weight: 600; cursor: pointer; padding: 2px 0; }
+.link-btn:hover { text-decoration: underline; }
+
+/* ---------------- picker (slider library) ---------------- */
+#pickerSearch { margin-bottom: 10px; }
+#btnAddCustom { width: 100%; margin-bottom: 14px; }
+.picker-list { max-height: 640px; overflow-y: auto; padding-right: 4px; }
+.picker-cat h4 {
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--steel);
+  margin: 16px 0 6px;
+  position: sticky; top: 0; background: var(--surface); padding: 4px 0;
+}
+.picker-cat:first-child h4 { margin-top: 0; }
+.picker-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 6px; border-bottom: 1px solid #f0eee6; border-radius: 6px;
+  transition: background 0.15s;
+}
+.picker-item.added { background: #f8f1e2; }
+.picker-item-main { flex: 1; min-width: 0; }
+.picker-item-name { font-weight: 600; font-size: 0.87rem; }
+.picker-item-desc { font-size: 0.76rem; color: var(--soft); margin-top: 2px; }
+.tag {
+  display: inline-block; font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+  color: var(--brass-dk); background: #f4e9d6; border-radius: 4px; padding: 1px 5px; margin-left: 4px;
+  vertical-align: middle;
+}
+.picker-item-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+/* tick/untick control: a real checkbox, visually styled as a tick box */
+/* position:relative here matters: it makes this the containing block for the
+   absolutely-positioned input below. Without it, the browser still *paints*
+   the input in the right spot (auto insets fall back to its static position),
+   but its focus geometry resolves against a distant ancestor, and clicking it
+   makes the browser auto-scroll to "bring the focused control into view" at
+   that wrong, faraway position — the reported jump. */
+.picker-check { position: relative; flex-shrink: 0; padding-top: 2px; cursor: pointer; }
+.picker-check input { position: absolute; opacity: 0; width: 18px; height: 18px; margin: 0; cursor: pointer; }
+.picker-check-box {
+  display: block; width: 18px; height: 18px; border-radius: 4px;
+  border: 2px solid var(--line); background: #fff;
+  position: relative;
+}
+.picker-check input:checked ~ .picker-check-box {
+  background: var(--brass); border-color: var(--brass);
+}
+.picker-check-box::after {
+  content: ""; position: absolute; left: 5px; top: 1px; width: 5px; height: 9px;
+  border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg);
+  opacity: 0; transition: opacity 0.1s;
+}
+.picker-check input:checked ~ .picker-check-box::after { opacity: 1; }
+.picker-check input:focus-visible ~ .picker-check-box { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+.empty-hint { color: var(--soft); font-size: 0.88rem; font-style: italic; padding: 10px 2px; }
+
+/* ---------------- active sliders (the gauges) ---------------- */
+.active-list { max-height: 700px; overflow-y: auto; padding-right: 4px; }
+.active-cat h4 {
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--steel);
+  margin: 20px 0 8px;
+}
+.active-cat:first-child h4 { margin-top: 0; }
+
+.slider-row {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line);
+  border-radius: 9px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  background: #fff;
+  transition: border-color 0.2s;
+  animation: rowIn 0.3s ease both;
+}
+.slider-row[data-band="not-met"]    { border-left-color: var(--not-met); }
+.slider-row[data-band="developing"] { border-left-color: var(--developing); }
+.slider-row[data-band="meeting"]    { border-left-color: var(--meeting); }
+.slider-row[data-band="exceeding"]  { border-left-color: var(--exceeding); }
+
+.slider-row-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.slider-row-name { font-weight: 700; font-size: 0.92rem; flex: 1; }
+.slider-row-tier {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--soft);
+  background: #f4f2ea;
+  border-radius: 5px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+.slider-row[data-band="not-met"] .slider-row-tier    { color: var(--not-met); }
+.slider-row[data-band="developing"] .slider-row-tier { color: var(--developing); }
+.slider-row[data-band="meeting"] .slider-row-tier    { color: var(--meeting); }
+.slider-row[data-band="exceeding"] .slider-row-tier  { color: var(--exceeding); }
+
+/* the gauge: an engraved measurement scale, brass needle thumb */
+input.gauge {
+  --fill: 50%;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  margin: 6px 0 2px;
+  border-radius: 5px;
+  background: linear-gradient(to right, var(--brass) 0%, var(--brass) var(--fill), #e4e1d3 var(--fill), #e4e1d3 100%);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.18);
+  cursor: pointer;
+}
+input.gauge::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px; height: 20px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(45deg);
+  background: var(--brass-dk);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  margin-top: -1px;
+}
+input.gauge::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--brass-dk);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+.gauge-ticks {
+  display: flex; justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: #b7b2a2;
+  padding: 0 2px 6px;
+  user-select: none;
+}
+.gauge-ticks span:first-child { color: var(--not-met); }
+.gauge-ticks span:last-child { color: var(--exceeding); }
+
+.slider-row-text {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--ink);
+  margin: 4px 0 8px;
+}
+.slider-row-tools { display: flex; gap: 14px; }
+.slider-row-editor { margin-top: 8px; }
+.slider-row-editor textarea { margin-bottom: 8px; }
+.editor-actions { display: flex; gap: 8px; }
+
+/* ---------------- summary / notes ---------------- */
+.summary-head { display: flex; align-items: center; justify-content: space-between; border-bottom: none; }
+.summary-head h2 { border-bottom: none; margin: 0; padding: 0; }
+.summary-actions { display: flex; gap: 14px; margin-bottom: 14px; }
+.summary-text {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  background: #f7f5f0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.summary-editor { margin-top: 10px; }
+.summary-editor textarea { margin-bottom: 8px; }
+
+.export-bar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 4px 2px;
+}
+.export-status { font-size: 0.85rem; color: var(--steel); font-weight: 600; }
+.export-status.error { color: var(--not-met); }
+
+/* ---------------- class roster ---------------- */
+.roster-card .hint { margin: -6px 0 16px; }
+.roster-add-row { display: flex; gap: 16px; align-items: flex-end; margin-bottom: 12px; }
+.roster-paste-col { flex: 1; }
+.roster-paste-col textarea { font-family: var(--font-mono); font-size: 0.85rem; }
+.roster-group-col { width: 220px; flex-shrink: 0; }
+@media (max-width: 700px) {
+  .roster-add-row { flex-direction: column; align-items: stretch; }
+  .roster-group-col { width: auto; }
+}
+#btnAddRoster { margin-bottom: 18px; }
+
+.roster-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.roster-toolbar #rosterSearch { max-width: 280px; }
+.roster-count { font-size: 0.8rem; font-weight: 700; color: var(--brass-dk); white-space: nowrap; }
+
+.roster-list { max-height: 420px; overflow-y: auto; padding-right: 4px; border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; }
+.roster-group { border-bottom: 1px solid #f0eee6; padding-bottom: 4px; margin-bottom: 4px; }
+.roster-group:last-child { border-bottom: none; }
+.roster-group-head { display: flex; align-items: center; gap: 10px; padding: 8px 2px 4px; }
+.roster-group-head h4 {
+  font-family: var(--font-display); font-size: 0.85rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--steel); margin: 0;
+}
+.roster-group-count { color: var(--soft); font-weight: 500; text-transform: none; letter-spacing: 0; }
+
+.roster-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 2px; border-bottom: 1px solid #f7f5ef;
+}
+.roster-row:last-child { border-bottom: none; }
+.roster-name { flex: 1; font-size: 0.9rem; font-weight: 600; }
+.roster-exported-tag { color: var(--exceeding); background: #e6f3ea; }
+
+.roster-export { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 16px; }
+
+/* ---------------- modal ---------------- */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(22,33,31,0.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; padding: 20px;
+}
+.modal-backdrop[hidden] { display: none; }
+.modal {
+  background: #fff; border-radius: var(--radius); padding: 24px 26px;
+  max-width: 480px; width: 100%;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  animation: modalIn 0.2s ease both;
+}
+.modal h3 { font-family: var(--font-display); margin: 0 0 16px; font-size: 1.2rem; }
+.modal label { margin-top: 12px; }
+.modal label:first-of-type { margin-top: 0; }
+.modal .hint { font-size: 0.76rem; color: var(--soft); margin: 2px 0 6px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+
+/* ---------------- motion ---------------- */
+@keyframes rowIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes modalIn { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+.card { animation: cardIn 0.45s ease both; }
+@keyframes cardIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+}

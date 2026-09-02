@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ClassAnchor Feedback Builder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Build City &amp; Guilds-style practical assessment feedback with sliders, then export a polished Word document." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-mark">Class<span>Anchor</span></div>
+  <div>
+    <div class="topbar-title">Feedback Builder</div>
+    <div class="topbar-sub">Slider-based practical assessment feedback for City &amp; Guilds tutors</div>
+  </div>
+</header>
+
+<div class="tabstrip">
+  <div id="tabBar" class="tab-bar" role="tablist" aria-label="Student assessments"></div>
+  <div class="tabstrip-actions">
+    <button type="button" id="btnDuplicateTab" class="btn btn-ghost" title="New tab with the same sliders selected">Duplicate Tab</button>
+    <button type="button" id="btnNewTab" class="btn btn-primary">+ New Assessment</button>
+  </div>
+</div>
+
+<div class="quick-export">
+  <span class="quick-export-label">Same feedback, different student?</span>
+  <button type="button" class="btn btn-primary btn-export-tab" title="Export this tab as a Word document">Export This Student (.docx)</button>
+  <button type="button" class="btn btn-ghost btn-export-all" title="Export every tab into one combined Word document">Export All Tabs Combined (.docx)</button>
+  <span class="export-status" hidden></span>
+</div>
+
+<main class="layout">
+
+  <section class="card student-card">
+    <h2>Student Details</h2>
+    <div class="grid-4">
+      <div><label for="studentName">Student Name</label><input id="studentName" type="text" autocomplete="off" /></div>
+      <div><label for="studentGroup">Group</label><input id="studentGroup" type="text" autocomplete="off" /></div>
+      <div><label for="studentLevel">Level</label><input id="studentLevel" type="text" autocomplete="off" placeholder="e.g. Level 2" /></div>
+      <div><label for="studentUnit">Unit Reference</label><input id="studentUnit" type="text" autocomplete="off" placeholder="e.g. 601/1234/5 — Unit 204" /></div>
+      <div><label for="tutorName">Tutor / Assessor Name</label><input id="tutorName" type="text" autocomplete="off" placeholder="e.g. S. Christian" /><p class="hint">Remembered across every tab and export.</p></div>
+      <div><label for="assessmentDate">Date</label><input id="assessmentDate" type="date" /></div>
+    </div>
+  </section>
+
+  <div class="workspace">
+    <section class="card picker-card">
+      <h2>Slider Library</h2>
+      <input id="pickerSearch" type="search" placeholder="Search sliders…" />
+      <button type="button" id="btnAddCustom" class="btn btn-primary">+ Create your own slider</button>
+      <div id="pickerList" class="picker-list"></div>
+    </section>
+
+    <section class="card active-card">
+      <h2>Feedback Sliders</h2>
+      <div id="activeList" class="active-list"></div>
+    </section>
+  </div>
+
+  <section class="card summary-card">
+    <div class="summary-head">
+      <h2>Summary of Performance</h2>
+    </div>
+    <div class="summary-actions">
+      <button type="button" id="summaryEditToggle" class="link-btn">Edit summary</button>
+      <button type="button" id="summaryRevert" class="link-btn" hidden>Revert to generated summary</button>
+    </div>
+    <p id="summaryText" class="summary-text"></p>
+    <div id="summaryEditor" class="summary-editor" hidden>
+      <textarea id="summaryTextarea" rows="4"></textarea>
+      <div class="editor-actions">
+        <button type="button" id="summarySave" class="btn btn-ghost">Save</button>
+        <button type="button" id="summaryCancelEdit" class="btn btn-ghost">Cancel</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card notes-card">
+    <h2>Additional Notes</h2>
+    <textarea id="notesArea" rows="5" placeholder="Any extra context, targets or comments for this student…"></textarea>
+  </section>
+
+  <section class="card roster-card">
+    <h2>Class Roster &amp; Batch Export</h2>
+    <p class="hint">Paste your class list once (one student per line), tick who this feedback applies to, and export them all as separate pages in a single Word document.</p>
+
+    <div class="roster-add">
+      <div class="roster-add-row">
+        <div class="roster-paste-col">
+          <label for="rosterPaste">Paste student names (one per line)</label>
+          <textarea id="rosterPaste" rows="4" placeholder="Jamie Ellis&#10;Priya Shah&#10;Alex Carter"></textarea>
+        </div>
+        <div class="roster-group-col">
+          <label for="rosterGroupInput">Group</label>
+          <input id="rosterGroupInput" type="text" placeholder="e.g. Plumbing L2 AM (or leave blank)" list="rosterGroupsList" autocomplete="off" />
+          <datalist id="rosterGroupsList"></datalist>
+        </div>
+      </div>
+      <button type="button" id="btnAddRoster" class="btn btn-primary">+ Add to Roster</button>
+    </div>
+
+    <div class="roster-toolbar">
+      <input id="rosterSearch" type="search" placeholder="Search roster…" />
+      <span id="rosterSelectedCount" class="roster-count">0 selected</span>
+    </div>
+    <div id="rosterList" class="roster-list"></div>
+
+    <div class="roster-export">
+      <button type="button" id="btnExportRoster" class="btn btn-primary btn-lg" disabled>Export Feedback to Selected Students (.docx)</button>
+      <span class="export-status" hidden></span>
+    </div>
+  </section>
+
+  <div class="export-bar">
+    <button type="button" class="btn btn-primary btn-lg btn-export-tab">Export This Student (.docx)</button>
+    <button type="button" class="btn btn-ghost btn-export-all">Export All Tabs Combined (.docx)</button>
+    <span class="export-status" hidden></span>
+  </div>
+
+</main>
+
+<div id="modalBackdrop" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h3 id="modalTitle">Create your own slider</h3>
+    <label for="modalName">Slider name</label>
+    <input id="modalName" type="text" placeholder="e.g. Soldering Technique" />
+    <label for="modalCategory">Category</label>
+    <select id="modalCategory"></select>
+    <label for="modalVerb">What does a top score (10) look like?</label>
+    <p class="hint">Completes the sentence: "&hellip;was able to ___". Keep it as one clear action.</p>
+    <textarea id="modalVerb" rows="2" placeholder="e.g. solder joints cleanly and safely to the required standard"></textarea>
+    <label for="modalDesc">Short description (optional, shown in the library)</label>
+    <input id="modalDesc" type="text" placeholder="One line describing what this covers" />
+    <div class="modal-actions">
+      <button type="button" id="modalSave" class="btn btn-primary">Save</button>
+      <button type="button" id="modalCancel" class="btn btn-ghost">Cancel</button>
+      <button type="button" id="modalResetDefault" class="btn btn-ghost" hidden>Reset to default wording</button>
+      <button type="button" id="modalDelete" class="btn btn-danger" hidden>Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="vendor/docx.iife.js"></script>
+<script src="data.js"></script>
+<script src="docx-export.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
