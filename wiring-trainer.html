@@ -133,6 +133,14 @@
     </div>
 
     <div class="panel">
+      <h3>Voltmeter</h3>
+      <button type="button" class="btn btn-primary" id="addMeterBtn">Add voltmeter to board</button>
+      <button type="button" class="btn btn-danger" id="removeMeterBtn" style="display:none;">Remove voltmeter</button>
+      <p class="hint">Drag the meter body to place it, then drag the red and black probe tips onto any terminal to test the voltage there — just like a real meter, it reads the difference between the two probe points. Tap the dial to switch it on/off.</p>
+      <p class="hint">2-Way Switches, the 20A DP Switch and the Fused Spur can be tapped on the board to flip them — try flipping a switch with both probes on the lamp's terminals to watch the reading change between 0V and 230V.</p>
+    </div>
+
+    <div class="panel">
       <h3>Board Tools</h3>
       <label style="display:flex;align-items:center;gap:6px;font-size:0.78rem;font-weight:600;">
         <input type="checkbox" id="snapToggle" checked style="width:auto;margin:0;" /> Snap to grid
@@ -190,6 +198,7 @@
         <g id="wiresLayer"></g>
         <g id="componentsLayer"></g>
         <g id="previewLayer"></g>
+        <g id="meterLayer"></g>
       </svg>
     </div>
   </div>
@@ -248,6 +257,11 @@ const COMP_DEFS = {
       <rect x="142" y="104" width="67" height="16" rx="3" fill="#ddd" stroke="#888"/>
       <text x="250" y="98" text-anchor="middle" font-size="7.5" font-weight="700" fill="#333">EARTH BAR</text>
       <rect x="217" y="104" width="67" height="16" rx="3" fill="#ddd" stroke="#888"/>`,
+    internalBonds: () => [
+      ['mainsL', 'socketsL'], ['mainsL', 'lightsL'],
+      ['mainsN', 'n1'], ['n1', 'n2'], ['n2', 'n3'], ['n3', 'n4'],
+      ['mainsE', 'e1'], ['e1', 'e2'], ['e2', 'e3'], ['e3', 'e4'],
+    ],
     terminals: {
       mainsL:   { x: 20,  y: 112, kind: 'L', text: 'L',     la: 'middle', ldx: 0, ldy: 13 },
       mainsN:   { x: 38,  y: 112, kind: 'N', text: 'N',     la: 'middle', ldx: 0, ldy: 13 },
@@ -283,12 +297,19 @@ const COMP_DEFS = {
 
   twoWaySwitch: {
     label: '2-Way Switch', badge: 'SW', w: 76, h: 76,
-    body: () => `
+    toggleType: 'twoway',
+    body: (c) => {
+      const st = c.switchState || 'L1';
+      const isL1 = st === 'L1';
+      return `
       <rect x="4" y="4" width="68" height="68" rx="8" fill="#f7f4ec" stroke="#333" stroke-width="1.5"/>
-      <rect x="16" y="16" width="24" height="44" rx="3" fill="#e9e6dd" stroke="#666"/>
-      <circle cx="28" cy="30" r="5" fill="#fff" stroke="#333"/>
-      <text x="38" y="13" text-anchor="middle" font-size="7.5" font-weight="700" fill="#333">2-WAY</text>
-      <text x="38" y="73" text-anchor="middle" font-size="7" fill="#333">SWITCH</text>`,
+      <rect data-toggle="${c.id}" x="12" y="14" width="34" height="46" rx="5" fill="#e9e6dd" stroke="#666" style="cursor:pointer;"/>
+      <line x1="29" y1="24" x2="29" y2="44" stroke="#999" stroke-width="1" stroke-dasharray="2 2" style="pointer-events:none;"/>
+      <circle cx="29" cy="${isL1 ? 24 : 44}" r="6" fill="#ffcf4d" stroke="#7a5200" stroke-width="1.3" style="pointer-events:none;"/>
+      <text x="38" y="13" text-anchor="middle" font-size="7.5" font-weight="700" fill="#333" style="pointer-events:none;">2-WAY</text>
+      <text x="38" y="72" text-anchor="middle" font-size="6.2" fill="#7a4a20" style="pointer-events:none;">tap: made COM-${isL1 ? 'L1' : 'L2'}</text>`;
+    },
+    internalBonds: (c) => [['COM', (c.switchState || 'L1') === 'L2' ? 'L2' : 'L1']],
     terminals: {
       COM: { x: 72, y: 20, kind: 'L', text: 'COM', la: 'end', ldx: -9, ldy: 3 },
       L1:  { x: 72, y: 38, kind: 'L', text: 'L1',  la: 'end', ldx: -9, ldy: 3 },
@@ -314,11 +335,17 @@ const COMP_DEFS = {
 
   dpSwitch20A: {
     label: '20A Double-Pole Switch', badge: 'DP', w: 130, h: 76,
-    body: () => `
+    toggleType: 'onoff',
+    body: (c) => {
+      const on = c.switchState === 'on';
+      return `
       <rect x="4" y="4" width="122" height="68" rx="8" fill="#f7f4ec" stroke="#333" stroke-width="1.5"/>
-      <rect x="52" y="26" width="26" height="24" rx="4" fill="#e9e6dd" stroke="#666"/>
-      <text x="65" y="13" text-anchor="middle" font-size="7.5" font-weight="700" fill="#333">20A DP SWITCH</text>
-      <text x="65" y="70" text-anchor="middle" font-size="6.5" fill="#333">(switches L + N)</text>`,
+      <rect data-toggle="${c.id}" x="50" y="24" width="30" height="28" rx="5" fill="${on ? '#dff5e6' : '#f3e2e2'}" stroke="${on ? '#1f8a4c' : '#a33'}" stroke-width="1.5" style="cursor:pointer;"/>
+      <circle cx="65" cy="${on ? 32 : 44}" r="5" fill="${on ? '#22a06b' : '#c0392b'}" style="pointer-events:none;"/>
+      <text x="65" y="13" text-anchor="middle" font-size="7.5" font-weight="700" fill="#333" style="pointer-events:none;">20A DP SWITCH</text>
+      <text x="65" y="70" text-anchor="middle" font-size="6.8" font-weight="700" fill="${on ? '#1f8a4c' : '#a33'}" style="pointer-events:none;">${on ? 'ON — tap to switch off' : 'OFF — tap to switch on'}</text>`;
+    },
+    internalBonds: (c) => c.switchState === 'on' ? [['L_IN', 'L_OUT'], ['N_IN', 'N_OUT']] : [],
     terminals: {
       L_IN:  { x: 6,   y: 20, kind: 'L', text: 'L IN',  la: 'start', ldx: 9,  ldy: 3 },
       N_IN:  { x: 6,   y: 38, kind: 'N', text: 'N IN',  la: 'start', ldx: 9,  ldy: 3 },
@@ -330,12 +357,17 @@ const COMP_DEFS = {
 
   fusedSpur: {
     label: 'Switched Fused Spur', badge: 'FS', w: 140, h: 76,
-    body: () => `
+    toggleType: 'onoff',
+    body: (c) => {
+      const on = c.switchState === 'on';
+      return `
       <rect x="4" y="4" width="132" height="68" rx="8" fill="#f7f4ec" stroke="#333" stroke-width="1.5"/>
-      <rect x="50" y="24" width="40" height="28" rx="4" fill="#fde9c8" stroke="#a07820"/>
-      <text x="70" y="36" text-anchor="middle" font-size="7" font-weight="700" fill="#7a4a00">FUSE</text>
-      <text x="70" y="46" text-anchor="middle" font-size="6.5" fill="#7a4a00">+ switch</text>
-      <text x="70" y="13" text-anchor="middle" font-size="7.5" font-weight="700" fill="#333">SWITCHED FUSED SPUR</text>`,
+      <rect data-toggle="${c.id}" x="48" y="22" width="44" height="30" rx="5" fill="${on ? '#fde9c8' : '#eee'}" stroke="#a07820" style="cursor:pointer;"/>
+      <text x="70" y="34" text-anchor="middle" font-size="7" font-weight="700" fill="#7a4a00" style="pointer-events:none;">FUSE</text>
+      <text x="70" y="45" text-anchor="middle" font-size="6.3" font-weight="700" fill="${on ? '#1f8a4c' : '#a33'}" style="pointer-events:none;">${on ? 'ON · tap' : 'OFF · tap'}</text>
+      <text x="70" y="13" text-anchor="middle" font-size="7.5" font-weight="700" fill="#333" style="pointer-events:none;">SWITCHED FUSED SPUR</text>`;
+    },
+    internalBonds: (c) => c.switchState === 'on' ? [['L_IN', 'L_OUT'], ['N_IN', 'N_OUT'], ['E_IN', 'E_OUT']] : [],
     terminals: {
       L_IN:  { x: 6,   y: 16, kind: 'L', text: 'L IN',  la: 'start', ldx: 9,  ldy: 3 },
       N_IN:  { x: 6,   y: 34, kind: 'N', text: 'N IN',  la: 'start', ldx: 9,  ldy: 3 },
@@ -365,14 +397,18 @@ const PALETTE_ORDER = ['mainsSupply', 'consumerUnit', 'ceilingRose', 'twoWaySwit
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
-let state = { components: [], wires: [] };
+let state = { components: [], wires: [], meter: null };
 let nextId = 1;
 let selection = null;            // {type:'component'|'wire', id}
 let selectedColor = null;        // 'L' | 'N' | 'E' | null
 let drawing = null;              // {color, from:{compId,key}, points:[{x,y}]}
 let lastPointerPt = null;
 let draggingComp = null;         // {id, offX, offY}
+let draggingProbe = null;        // 'A' | 'B'
+let draggingMeterBody = null;    // {offX, offY}
 let snapEnabled = true;
+
+const METER_W = 100, METER_H = 178;
 
 const boardSvg = document.getElementById('boardSvg');
 const componentsG = document.getElementById('componentsLayer');
@@ -396,6 +432,67 @@ function termPos(compId, key) {
   if (!comp) return { x: 0, y: 0 };
   const t = COMP_DEFS[comp.type].terminals[key];
   return { x: comp.x + t.x, y: comp.y + t.y };
+}
+
+function probePos(p) {
+  if (p.attachedTo) return termPos(p.attachedTo.compId, p.attachedTo.key);
+  return { x: p.x, y: p.y };
+}
+
+// ── CIRCUIT SIMULATION (for the voltmeter) ───────────────────────────────────
+// Builds a union-find network over every terminal: wires join terminals, and
+// each component's internalBonds() joins terminals that are permanently
+// strapped together inside it (neutral/earth bars) or joined only when a
+// switch is toggled "made"/"on". Any terminal that traces back to a Mains
+// Supply component's L/N/E terminal inherits that potential.
+
+function computeNetwork() {
+  const parent = new Map();
+  function nodeKey(compId, key) { return compId + '|' + key; }
+  function find(x) {
+    let root = x;
+    while (parent.get(root) !== root) root = parent.get(root);
+    while (parent.get(x) !== root) { const next = parent.get(x); parent.set(x, root); x = next; }
+    return root;
+  }
+  function union(a, b) {
+    const ra = find(a), rb = find(b);
+    if (ra !== rb) parent.set(ra, rb);
+  }
+
+  state.components.forEach(c => {
+    Object.keys(COMP_DEFS[c.type].terminals).forEach(k => parent.set(nodeKey(c.id, k), nodeKey(c.id, k)));
+  });
+
+  state.wires.forEach(w => union(nodeKey(w.from.compId, w.from.key), nodeKey(w.to.compId, w.to.key)));
+
+  state.components.forEach(c => {
+    const def = COMP_DEFS[c.type];
+    if (def.internalBonds) def.internalBonds(c).forEach(([a, b]) => union(nodeKey(c.id, a), nodeKey(c.id, b)));
+  });
+
+  const potentialOfRoot = new Map();
+  state.components.forEach(c => {
+    if (c.type === 'mainsSupply') {
+      ['L', 'N', 'E'].forEach(k => {
+        const root = find(nodeKey(c.id, k));
+        if (!potentialOfRoot.has(root)) potentialOfRoot.set(root, k);
+      });
+    }
+  });
+
+  return { find, nodeKey, potentialOfRoot };
+}
+
+function potentialAt(compId, key, net) {
+  const root = net.find(net.nodeKey(compId, key));
+  return net.potentialOfRoot.get(root) || null;
+}
+
+function voltageBetween(pA, pB) {
+  if (pA === null || pB === null) return 0;
+  if (pA === pB) return 0;
+  return (pA === 'L' || pB === 'L') ? 230 : 0;
 }
 
 function escapeHtml(s) {
@@ -481,6 +578,76 @@ function renderPreview() {
   previewG.innerHTML = `<path d="${d}" fill="none" stroke="${c}" stroke-width="3" stroke-dasharray="6 5" opacity="0.85"/>${dots}${ring}`;
 }
 
+function meterBodySvg(m, readingText) {
+  const on = m.on;
+  const angleDeg = on ? -90 : -220;
+  const rad = angleDeg * Math.PI / 180;
+  const r = 22;
+  const nx = (50 + r * Math.cos(rad)).toFixed(1);
+  const ny = (114 + r * Math.sin(rad)).toFixed(1);
+  return `
+    <rect data-meter-body="1" x="0" y="0" width="${METER_W}" height="${METER_H}" rx="16" fill="#242424" stroke="#000" stroke-width="1" style="cursor:grab;"/>
+    <rect x="6" y="6" width="88" height="166" rx="11" fill="#f4b400" stroke="#b8860b" stroke-width="1.5" style="pointer-events:none;"/>
+    <rect x="16" y="18" width="68" height="38" rx="3" fill="${on ? '#cfe3c4' : '#9a9a90'}" stroke="#333" stroke-width="1.2" style="pointer-events:none;"/>
+    <text x="82" y="27" text-anchor="end" font-size="6" fill="#333" style="pointer-events:none;">AC VOLTS</text>
+    <text x="50" y="45" text-anchor="middle" font-family="'Courier New',monospace" font-size="13.5" font-weight="700" fill="#111" style="pointer-events:none;">${on ? readingText : ''}</text>
+    <rect x="18" y="62" width="18" height="9" rx="2" fill="#2a2a2a" style="pointer-events:none;"/>
+    <rect x="41" y="62" width="18" height="9" rx="2" fill="#2a2a2a" style="pointer-events:none;"/>
+    <rect x="64" y="62" width="18" height="9" rx="2" fill="#2a2a2a" style="pointer-events:none;"/>
+    <circle data-meter-toggle="1" cx="50" cy="114" r="28" fill="#3a3a3a" stroke="#111" stroke-width="1.5" style="cursor:pointer;"/>
+    <text x="50" y="92" text-anchor="middle" font-size="7" font-weight="700" fill="#eee" style="pointer-events:none;">V~</text>
+    <text x="24" y="130" text-anchor="middle" font-size="6" font-weight="700" fill="#eee" style="pointer-events:none;">OFF</text>
+    <circle cx="50" cy="114" r="4" fill="#ccc" style="pointer-events:none;"/>
+    <line x1="50" y1="114" x2="${nx}" y2="${ny}" stroke="#fff" stroke-width="2.5" stroke-linecap="round" style="pointer-events:none;"/>
+    <text x="50" y="150" text-anchor="middle" font-size="6.5" font-weight="800" fill="${on ? '#1f8a4c' : '#a33'}" style="pointer-events:none;">tap dial: ${on ? 'ON' : 'OFF'}</text>
+    <circle cx="30" cy="163" r="6.5" fill="#c0392b" stroke="#700" stroke-width="1" style="pointer-events:none;"/>
+    <circle cx="70" cy="163" r="6.5" fill="#111" stroke="#000" stroke-width="1" style="pointer-events:none;"/>`;
+}
+
+function probeMarkup(pos, kind) {
+  const isRed = kind === 'A';
+  const bodyFill = isRed ? '#d63b2f' : '#2a2a2a';
+  const bodyStroke = isRed ? '#8a1f1f' : '#000';
+  return `
+    <g data-probe="${kind}" transform="translate(${pos.x.toFixed(1)},${pos.y.toFixed(1)}) rotate(-30)" style="cursor:grab;">
+      <rect x="-30" y="-10" width="34" height="20" rx="6" fill="transparent"/>
+      <rect x="-28" y="-4.5" width="15" height="9" rx="2.5" fill="${bodyFill}" stroke="${bodyStroke}" stroke-width="1" style="pointer-events:none;"/>
+      <rect x="-14" y="-3" width="9" height="6" rx="1.5" fill="#9a9a9a" stroke="#555" stroke-width="0.6" style="pointer-events:none;"/>
+      <line x1="-6" y1="0" x2="0" y2="0" stroke="#ddd" stroke-width="1.8" stroke-linecap="round" style="pointer-events:none;"/>
+      <circle cx="0" cy="0" r="1.6" fill="#eee" style="pointer-events:none;"/>
+    </g>`;
+}
+
+function meterReadingText(m, net) {
+  const a = m.probeA.attachedTo, b = m.probeB.attachedTo;
+  if (!a || !b) return '– – –';
+  const pa = potentialAt(a.compId, a.key, net);
+  const pb = potentialAt(b.compId, b.key, net);
+  return voltageBetween(pa, pb).toFixed(1) + ' V';
+}
+
+function renderMeter() {
+  const layer = document.getElementById('meterLayer');
+  const m = state.meter;
+  if (!m) { layer.innerHTML = ''; return; }
+  const net = computeNetwork();
+  const readingText = meterReadingText(m, net);
+  const posA = probePos(m.probeA), posB = probePos(m.probeB);
+  const jackA = { x: m.x + 30, y: m.y + 163 }, jackB = { x: m.x + 70, y: m.y + 163 };
+  layer.innerHTML = `
+    <path d="M ${jackA.x},${jackA.y} L ${posA.x.toFixed(1)},${posA.y.toFixed(1)}" stroke="#c0392b" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M ${jackB.x},${jackB.y} L ${posB.x.toFixed(1)},${posB.y.toFixed(1)}" stroke="#222" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <g transform="translate(${m.x},${m.y})">${meterBodySvg(m, readingText)}</g>
+    ${probeMarkup(posA, 'A')}
+    ${probeMarkup(posB, 'B')}`;
+}
+
+function syncMeterButtons() {
+  const hasMeter = !!state.meter;
+  document.getElementById('addMeterBtn').style.display = hasMeter ? 'none' : 'block';
+  document.getElementById('removeMeterBtn').style.display = hasMeter ? 'block' : 'none';
+}
+
 function updateStatusStrip() {
   const el = document.getElementById('statusStrip');
   if (drawing) {
@@ -498,6 +665,8 @@ function render() {
   renderComponents();
   renderWires();
   renderPreview();
+  renderMeter();
+  syncMeterButtons();
   updateStatusStrip();
   document.getElementById('undoPointBtn').disabled = !(drawing && drawing.points.length);
   document.getElementById('cancelWireBtn').disabled = !drawing;
@@ -510,10 +679,23 @@ function addComponent(type, x, y) {
   const id = 'c' + (nextId++);
   const cx = clamp(x - def.w / 2, MARGIN, BOARD_W - def.w - MARGIN);
   const cy = clamp(y - def.h / 2, MARGIN, BOARD_H - def.h - MARGIN);
-  state.components.push({ id, type, x: cx, y: cy });
+  const comp = { id, type, x: cx, y: cy };
+  if (def.toggleType === 'twoway') comp.switchState = 'L1';
+  else if (def.toggleType === 'onoff') comp.switchState = 'off';
+  state.components.push(comp);
   selection = { type: 'component', id };
   render();
   flashStatus(`Added ${def.label}.`);
+}
+
+function toggleSwitch(compId) {
+  const comp = findComp(compId);
+  if (!comp) return;
+  const def = COMP_DEFS[comp.type];
+  if (def.toggleType === 'twoway') comp.switchState = (comp.switchState || 'L1') === 'L2' ? 'L1' : 'L2';
+  else if (def.toggleType === 'onoff') comp.switchState = comp.switchState === 'on' ? 'off' : 'on';
+  render();
+  flashStatus(`${def.label} switched.`);
 }
 
 // ── WIRE DRAWING ──────────────────────────────────────────────────────────────
@@ -553,8 +735,17 @@ function deleteSelection() {
   if (selection.type === 'wire') {
     state.wires = state.wires.filter(w => w.id !== selection.id);
   } else {
-    state.wires = state.wires.filter(w => w.from.compId !== selection.id && w.to.compId !== selection.id);
-    state.components = state.components.filter(c => c.id !== selection.id);
+    const deadId = selection.id;
+    if (state.meter) {
+      [state.meter.probeA, state.meter.probeB].forEach(p => {
+        if (p.attachedTo && p.attachedTo.compId === deadId) {
+          const pos = termPos(deadId, p.attachedTo.key);
+          p.attachedTo = null; p.x = pos.x; p.y = pos.y;
+        }
+      });
+    }
+    state.wires = state.wires.filter(w => w.from.compId !== deadId && w.to.compId !== deadId);
+    state.components = state.components.filter(c => c.id !== deadId);
   }
   selection = null;
   render();
@@ -564,6 +755,23 @@ function deleteSelection() {
 
 boardSvg.addEventListener('pointerdown', e => {
   const pt = getBoardPoint(e);
+
+  if (state.meter) {
+    const probeEl = e.target.closest('[data-probe]');
+    if (probeEl) { draggingProbe = probeEl.getAttribute('data-probe'); e.preventDefault(); return; }
+    const meterToggleEl = e.target.closest('[data-meter-toggle]');
+    if (meterToggleEl) { state.meter.on = !state.meter.on; render(); e.preventDefault(); return; }
+    const meterBodyEl = e.target.closest('[data-meter-body]');
+    if (meterBodyEl) {
+      draggingMeterBody = { offX: pt.x - state.meter.x, offY: pt.y - state.meter.y };
+      e.preventDefault();
+      return;
+    }
+  }
+
+  const toggleEl = e.target.closest('[data-toggle]');
+  if (toggleEl) { toggleSwitch(toggleEl.getAttribute('data-toggle')); e.preventDefault(); return; }
+
   const termEl = e.target.closest('[data-term]');
 
   if (drawing) {
@@ -607,7 +815,37 @@ boardSvg.addEventListener('pointerdown', e => {
   render();
 });
 
+function findNearestTerminal(pt, maxDist) {
+  let best = null, bestDist = maxDist;
+  state.components.forEach(c => {
+    const def = COMP_DEFS[c.type];
+    Object.entries(def.terminals).forEach(([key, t]) => {
+      const tx = c.x + t.x, ty = c.y + t.y;
+      const d = Math.hypot(pt.x - tx, pt.y - ty);
+      if (d <= bestDist) { bestDist = d; best = { compId: c.id, key }; }
+    });
+  });
+  return best;
+}
+
 window.addEventListener('pointermove', e => {
+  if (draggingProbe) {
+    const pt = getBoardPoint(e);
+    const near = findNearestTerminal(pt, 16);
+    const p = draggingProbe === 'A' ? state.meter.probeA : state.meter.probeB;
+    if (near) { p.attachedTo = near; }
+    else { p.attachedTo = null; p.x = pt.x; p.y = pt.y; }
+    renderMeter();
+    return;
+  }
+  if (draggingMeterBody) {
+    const pt = getBoardPoint(e);
+    const m = state.meter;
+    m.x = clamp(pt.x - draggingMeterBody.offX, MARGIN, BOARD_W - METER_W - MARGIN);
+    m.y = clamp(pt.y - draggingMeterBody.offY, MARGIN, BOARD_H - METER_H - MARGIN);
+    renderMeter();
+    return;
+  }
   if (drawing) {
     lastPointerPt = getBoardPoint(e);
     renderPreview();
@@ -621,10 +859,11 @@ window.addEventListener('pointermove', e => {
     comp.y = clamp(s.y, MARGIN, BOARD_H - def.h - MARGIN);
     renderComponents();
     renderWires();
+    renderMeter();
   }
 });
 
-window.addEventListener('pointerup', () => { draggingComp = null; });
+window.addEventListener('pointerup', () => { draggingComp = null; draggingProbe = null; draggingMeterBody = null; });
 
 boardSvg.addEventListener('contextmenu', e => { e.preventDefault(); if (drawing) cancelWire(); });
 
@@ -703,13 +942,34 @@ document.getElementById('clearWiresBtn').addEventListener('click', () => {
 
 document.getElementById('newBoardBtn').addEventListener('click', () => {
   if (state.components.length && !confirm('Clear the board? Unsaved changes will be lost.')) return;
-  state = { components: [], wires: [] };
+  state = { components: [], wires: [], meter: null };
   selection = null; drawing = null;
   document.getElementById('lessonName').value = '';
   render();
 });
 
 document.getElementById('snapToggle').addEventListener('change', e => { snapEnabled = e.target.checked; });
+
+// ── VOLTMETER ─────────────────────────────────────────────────────────────────
+
+document.getElementById('addMeterBtn').addEventListener('click', () => {
+  if (state.meter) return;
+  const mx = clamp(BOARD_W / 2 - METER_W / 2, MARGIN, BOARD_W - METER_W - MARGIN);
+  const my = MARGIN;
+  state.meter = {
+    x: mx, y: my, on: false,
+    probeA: { x: mx + 20, y: my + METER_H + 50, attachedTo: null },
+    probeB: { x: mx + 80, y: my + METER_H + 50, attachedTo: null },
+  };
+  render();
+  flashStatus('Voltmeter added — drag the probes onto terminals to test.');
+});
+
+document.getElementById('removeMeterBtn').addEventListener('click', () => {
+  state.meter = null;
+  render();
+  flashStatus('Voltmeter removed.');
+});
 
 // ── LESSON SAVE / LOAD (localStorage) ────────────────────────────────────────
 
@@ -746,6 +1006,7 @@ document.getElementById('loadLessonBtn').addEventListener('click', () => {
   if (!lessons[name]) return;
   if (!confirm(`Load "${name}"? This replaces the current board.`)) return;
   state = JSON.parse(JSON.stringify(lessons[name]));
+  if (!state.meter) state.meter = null;
   nextId = computeNextId(state);
   selection = null; drawing = null;
   document.getElementById('lessonName').value = name;
@@ -786,6 +1047,7 @@ document.getElementById('importJsonFile').addEventListener('change', e => {
       const data = JSON.parse(reader.result);
       if (!data.components || !data.wires) throw new Error('Not a valid diagram file.');
       state = data;
+      if (!state.meter) state.meter = null;
       nextId = computeNextId(state);
       selection = null; drawing = null;
       render();
