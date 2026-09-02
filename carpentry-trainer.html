@@ -33,8 +33,8 @@
   .curriculum-close { background: var(--border); border: none; border-radius: 7px; width: 32px; height: 32px; font-size: 1rem; cursor: pointer; flex-shrink: 0; }
   .curriculum-close:hover { background: #ccc; }
   .curriculum-tabs { display: flex; gap: 6px; padding: 12px 22px 0; flex-wrap: wrap; }
-  .curriculum-fixing-toggle { display: flex; align-items: center; gap: 7px; margin: 12px 22px 0; font-size: 0.78rem; font-weight: 700; color: var(--accent-dk); cursor: pointer; }
-  .curriculum-fixing-toggle input { width: auto; margin: 0; }
+  .curriculum-assemble-toggle { display: flex; align-items: center; gap: 7px; margin: 12px 22px 0; font-size: 0.78rem; font-weight: 700; color: var(--accent-dk); cursor: pointer; }
+  .curriculum-assemble-toggle input { width: auto; margin: 0; }
   .curriculum-tab { padding: 8px 14px; border-radius: 8px 8px 0 0; border: 1px solid var(--border); border-bottom: none; background: var(--bg); font-size: 0.82rem; font-weight: 700; cursor: pointer; color: var(--soft); }
   .curriculum-tab.active { background: var(--surface); color: var(--accent-dk); border-color: var(--accent); }
   .curriculum-list { overflow-y: auto; padding: 16px 22px 22px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
@@ -64,11 +64,6 @@
   .palette-details[open] summary { margin-bottom: 10px; }
   .palette-details .palette-grid { margin-top: 4px; }
   .panel p.hint { font-size: 0.76rem; color: var(--soft); margin: 6px 0 0; line-height: 1.4; }
-  .hint-details { margin-top: 8px; }
-  .hint-details summary { font-size: 0.76rem; font-weight: 700; color: var(--accent-dk); cursor: pointer; list-style: none; }
-  .hint-details summary::-webkit-details-marker { display: none; }
-  .hint-details[open] summary { margin-bottom: 2px; }
-  .hint-details p.hint { margin-top: 4px; }
 
   .palette-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .palette-item {
@@ -86,15 +81,6 @@
     padding: 6px 10px; border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.3); opacity: 0.92;
   }
 
-  .fixing-row { display: flex; gap: 8px; }
-  .fixing-btn {
-    flex: 1; padding: 10px 4px; border-radius: 8px; border: 2px solid var(--border);
-    cursor: pointer; font-size: 0.66rem; font-weight: 700; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,0.4);
-  }
-  .fixing-btn[data-fixing="CARCASS"] { background: #6b4423; }
-  .fixing-btn[data-fixing="HANGER"] { background: #4a6fa5; }
-  .fixing-btn[data-fixing="FINISH"] { background: #2e8b3d; }
-  .fixing-btn.active { border-color: #ffb020; box-shadow: 0 0 0 2px #ffb02055; }
   .armed-status { font-size: 0.76rem; margin-top: 8px; color: var(--soft); min-height: 16px; }
 
   .btn { padding: 8px 12px; border-radius: 7px; border: none; font-size: 0.8rem; font-weight: 600; cursor: pointer; width: 100%; margin-top: 6px; }
@@ -109,19 +95,13 @@
 
   select, input[type=text] { width: 100%; padding: 7px 9px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.82rem; margin-top: 6px; }
 
-  .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.76rem; margin-top: 6px; }
-  .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 1.5px solid #333; }
-  .legend-dot.carcass { background: #6b4423; }
-  .legend-dot.hanger { background: #4a6fa5; }
-  .legend-dot.finish { background: #2e8b3d; }
-
   .status-strip { padding: 9px 18px; font-size: 0.82rem; background: #fffbeb; border-bottom: 1px solid var(--border); color: #7a5a00; min-height: 20px; }
 
   .board-scroll { flex: 1; overflow: auto; background: #8a6a44; padding: 20px; }
   #boardSvg { display: block; background: #e4dcc8; touch-action: none; box-shadow: 0 4px 20px rgba(0,0,0,0.35); border-radius: 4px; }
 
-  .point circle:first-child { cursor: crosshair; }
-  .comp-group { cursor: grab; }
+  .comp-group.unlocked { cursor: grab; }
+  .comp-group.locked { cursor: default; }
 
   #actionStatus { font-size: 0.72rem; color: var(--soft); margin-top: 10px; min-height: 14px; }
 
@@ -137,7 +117,7 @@
 <div class="topbar">
   <div>
     <div class="topbar-title">🔨 ClassAnchor Carpentry Trainer</div>
-    <div class="topbar-sub">City &amp; Guilds Level 2 Site Carpentry — interactive practical build &amp; level/plumb-check board</div>
+    <div class="topbar-sub">City &amp; Guilds Level 2 Site Carpentry — drag, snap, lock &amp; check level/plumb</div>
   </div>
   <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
     <button type="button" class="btn-curriculum" id="openCurriculumBtn">📘 Level 2 Units</button>
@@ -156,15 +136,15 @@
       <button type="button" class="curriculum-close" id="closeCurriculumBtn">✕</button>
     </div>
     <div class="curriculum-tabs" id="curriculumTabs"></div>
-    <label class="curriculum-fixing-toggle">
-      <input type="checkbox" id="includeFixingToggle" />
-      🔨 Include fixings — load a fully-fixed reference example, not just a bare component kit
+    <label class="curriculum-assemble-toggle">
+      <input type="checkbox" id="includeAssembleToggle" />
+      🔨 Assemble &amp; lock — load a partly snapped-together reference, not just a scattered kit
     </label>
     <div class="curriculum-list" id="curriculumList"></div>
   </div>
 </div>
 
-<div class="status-strip" id="statusStrip">Drag components from the panel on the left onto the board, then pick a fixing type to start fixing them together.</div>
+<div class="status-strip" id="statusStrip">Drag components onto the board. Drag one so a connection point lines up with another, then tap its lock icon to fix it there.</div>
 
 <div class="app">
 
@@ -174,35 +154,25 @@
       <details class="palette-details" open>
         <summary>Components</summary>
         <div class="palette-grid" id="paletteGrid"></div>
-        <p class="hint">Drag a component onto the board with your mouse or finger. Drag any placed component to reposition it — connected fixings follow automatically.</p>
+        <p class="hint">Drag a component onto the board. Drag any unlocked component to reposition it, or drag its corner/end handle to stretch it longer or shorter. Move it close to a matching connection point on another component and it snaps into place.</p>
       </details>
     </div>
 
     <div class="panel">
-      <h3>Fixing Type</h3>
-      <div class="fixing-row" id="fixingRow"></div>
-      <div class="armed-status" id="armedStatus">No fixing type selected.</div>
-      <div class="btn-row">
-        <button type="button" class="btn btn-ghost" id="undoPointBtn">Undo point</button>
-        <button type="button" class="btn btn-ghost" id="cancelFixingBtn">Cancel fixing</button>
-      </div>
-      <details class="hint-details">
-        <summary>ℹ How to fix two components together</summary>
-        <p class="hint">Press and drag from a connection point, then release: over open board it drops a route point (press-drag-release again to keep going), over another connection point it fixes them together and finishes. Esc or right-click cancels. Pick a fixing type again for the next one, even the same type.</p>
-      </details>
+      <h3>Lock / Unlock</h3>
+      <p class="hint">Once a component is snapped onto a connection point, tap the padlock on it to lock it there — locked pieces can't be dragged or resized. Tap the padlock again to unlock and reposition. Only locked pieces count toward the level/plumb check below.</p>
     </div>
 
     <div class="panel">
-      <h3>Structure Check</h3>
-      <p class="hint">Every connection point expects one specific fixing type (see the coloured ring around it). A wrong-type fixing shows as a fault right at the mistake — same idea as plugging the wrong wire into the wrong terminal. There's no power switch here: the check runs live, all the time, from the Ground / Floor Datum outward.</p>
-      <div class="armed-status" id="structureStatus">No faults.</div>
+      <h3>Assembly Status</h3>
+      <div class="armed-status" id="assemblyStatus">No components yet.</div>
     </div>
 
     <div class="panel">
       <h3>Level &amp; Plumb Check</h3>
       <button type="button" class="btn btn-primary" id="addLevelBtn">Add level to board</button>
       <button type="button" class="btn btn-danger" id="removeLevelBtn" style="display:none;">Remove level</button>
-      <p class="hint">Drag the spirit level onto any placed component. It reads TRUE (bubble centred) once that component is correctly fixed all the way back to a true reference — or OUT if a fixing along the way is missing or the wrong type.</p>
+      <p class="hint">Drag the spirit level onto any placed component. It reads TRUE (bubble centred) once that component is locked and its chain of locked connections traces all the way back to a Ground / Floor Datum — or OUT if anything along the way is unlocked or missing.</p>
     </div>
 
     <div class="panel">
@@ -221,7 +191,7 @@
       </div>
       <div class="btn-row" style="margin-top:8px;">
         <button type="button" class="btn btn-danger" id="deleteSelBtn">Delete selected</button>
-        <button type="button" class="btn btn-ghost" id="clearFixingsBtn">Clear fixings</button>
+        <button type="button" class="btn btn-ghost" id="unlockAllBtn">Unlock all</button>
       </div>
       <button type="button" class="btn btn-ghost" id="newBoardBtn">New blank board</button>
     </div>
@@ -246,14 +216,6 @@
       </div>
       <input type="file" id="importJsonFile" accept="application/json" style="display:none;" />
       <button type="button" class="btn btn-ghost" id="exportPngBtn">Export as image (PNG)</button>
-    </div>
-
-    <div class="panel">
-      <h3>Fixing Key</h3>
-      <div class="legend-row"><span class="legend-dot carcass"></span> Carcass fixing — nails/screws, main framing</div>
-      <div class="legend-row"><span class="legend-dot hanger"></span> Hanger/metalwork — joist hangers, framing anchors</div>
-      <div class="legend-row"><span class="legend-dot finish"></span> Finish fixing — second-fix (hinges, pins, screws)</div>
-      <p class="hint">The ring around each connection point shows the correct fixing type for that point — a quick visual check for students.</p>
       <div id="actionStatus"></div>
     </div>
 
@@ -270,9 +232,7 @@
         <rect x="0" y="0" width="1500" height="950" fill="#e4dcc8"/>
         <rect x="0" y="0" width="1500" height="950" fill="url(#boardGrid)"/>
         <g id="componentsLayer"></g>
-        <g id="fixingsLayer"></g>
-        <g id="pointsLayer"></g>
-        <g id="previewLayer"></g>
+        <g id="snapPreviewLayer"></g>
         <g id="levelLayer"></g>
       </svg>
     </div>
@@ -286,260 +246,255 @@
 // ── BOARD CONSTANTS ──────────────────────────────────────────────────────────
 
 const BOARD_W = 1500, BOARD_H = 950, MARGIN = 20, GRID = 10;
-const FIXING_HEX = { CARCASS: '#6b4423', HANGER: '#4a6fa5', FINISH: '#2e8b3d' };
-const FIXING_NAME = { CARCASS: 'CARCASS (nail/screw framing)', HANGER: 'HANGER/METALWORK', FINISH: 'FINISH (second-fix)' };
-const KIND_NAME = { CARCASS: 'Carcass', HANGER: 'Hanger', FINISH: 'Finish' };
+const SNAP_DIST = 20;     // how close a dragged point must land to snap on release
+const LOCK_EPSILON = 6;   // how exactly-coincident two points must be to allow locking
+
+// Connection-point kinds are invisible (no colour picker) — they just gate
+// which points are allowed to snap to which. 'ANY' (the Ground/Floor Datum's
+// anchors) matches every other kind.
+function pointsCompatible(kindA, kindB) {
+  return kindA === kindB || kindA === 'ANY' || kindB === 'ANY';
+}
 
 // ── COMPONENT DEFINITIONS ────────────────────────────────────────────────────
-// Each connection point: {x,y} = position relative to the component's
-// top-left corner. kind: 'CARCASS' | 'HANGER' | 'FINISH' drives the coloured
-// ring, and is what a fixing's own type must match at BOTH ends to be valid.
-// internalLinks(c): pairs of this component's own points that are always
-// bonded together, because it's genuinely one rigid piece of timber/metal —
-// e.g. a stud's TOP and BOTTOM are the same length of wood, so once one end
-// is proven true the whole stud is.
+// Each type has a base size (baseW/baseH) and, if stretchAxis is set, can be
+// dragged longer/shorter along that axis (stored per-instance as c.w/c.h).
+// terminals(c) computes connection points from the component's CURRENT
+// size, so a stretched plate's stud positions redistribute automatically.
+// body(c) draws using c.w/c.h too.
 
 const COMP_DEFS = {
 
   groundDatum: {
-    label: 'Ground / Floor Datum (verified true)', badge: 'GND', w: 140, h: 76,
-    body: () => `
-      <rect x="0" y="0" width="140" height="76" rx="6" fill="#d8d2c4" stroke="#333" stroke-width="1.5"/>
-      <line x1="8" y1="68" x2="20" y2="56" stroke="#999" stroke-width="1.2"/>
-      <line x1="18" y1="68" x2="30" y2="56" stroke="#999" stroke-width="1.2"/>
-      <line x1="28" y1="68" x2="40" y2="56" stroke="#999" stroke-width="1.2"/>
-      <text x="70" y="18" text-anchor="middle" font-size="9" font-weight="800" fill="#333">GROUND / FLOOR</text>
-      <text x="70" y="30" text-anchor="middle" font-size="9" font-weight="800" fill="#333">DATUM</text>
-      <text x="70" y="42" text-anchor="middle" font-size="6.3" fill="#666">(verified level &amp; plumb)</text>`,
-    internalLinks: () => [['carcassOut', 'hangerOut'], ['hangerOut', 'finishOut']],
-    terminals: {
-      carcassOut: { x: 140, y: 18, kind: 'CARCASS', text: 'C', la: 'end', ldx: -9, ldy: 3 },
-      hangerOut:  { x: 140, y: 38, kind: 'HANGER',  text: 'H', la: 'end', ldx: -9, ldy: 3 },
-      finishOut:  { x: 140, y: 58, kind: 'FINISH',  text: 'F', la: 'end', ldx: -9, ldy: 3 },
-    }
+    label: 'Ground / Floor Datum (verified true)', badge: 'GND',
+    baseW: 280, baseH: 60, stretchAxis: null,
+    body: (c) => `
+      <rect x="0" y="0" width="${c.w}" height="${c.h}" rx="6" fill="#d8d2c4" stroke="#333" stroke-width="1.5"/>
+      <line x1="8" y1="${c.h-8}" x2="20" y2="${c.h-20}" stroke="#999" stroke-width="1.2"/>
+      <line x1="18" y1="${c.h-8}" x2="30" y2="${c.h-20}" stroke="#999" stroke-width="1.2"/>
+      <line x1="28" y1="${c.h-8}" x2="40" y2="${c.h-20}" stroke="#999" stroke-width="1.2"/>
+      <text x="${c.w/2}" y="16" text-anchor="middle" font-size="9" font-weight="800" fill="#333">GROUND / FLOOR DATUM</text>
+      <text x="${c.w/2}" y="30" text-anchor="middle" font-size="6.3" fill="#666">(verified level &amp; plumb — always true)</text>`,
+    terminals: (c) => {
+      const n = 5, margin = 24;
+      const step = (c.w - margin * 2) / (n - 1);
+      const t = {};
+      for (let i = 0; i < n; i++) t['a' + i] = { x: margin + i * step, y: 44, kind: 'ANY', text: 'ANC', la: 'middle', ldx: 0, ldy: 13 };
+      return t;
+    },
   },
 
   solePlate: {
-    label: 'Sole Plate', badge: 'SP', w: 300, h: 70,
-    body: () => `
-      <rect x="0" y="20" width="300" height="26" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
-      ${[0,1,2,3,4,5].map(i => `<line x1="${i*50+8}" y1="22" x2="${i*50+8}" y2="44" stroke="#a87b45" stroke-width="0.6"/>`).join('')}
-      <text x="150" y="37" text-anchor="middle" font-size="8.5" font-weight="800" fill="#3a2410">SOLE PLATE</text>`,
-    internalLinks: () => [['p0','p1'],['p1','p2'],['p2','p3'],['p3','p4'],['p0','datumIn']],
-    terminals: {
-      p0: { x: 30,  y: 20, kind: 'CARCASS', text: 'STUD', la: 'middle', ldx: 0, ldy: -8 },
-      p1: { x: 90,  y: 20, kind: 'CARCASS', text: 'STUD', la: 'middle', ldx: 0, ldy: -8 },
-      p2: { x: 150, y: 20, kind: 'CARCASS', text: 'STUD', la: 'middle', ldx: 0, ldy: -8 },
-      p3: { x: 210, y: 20, kind: 'CARCASS', text: 'STUD', la: 'middle', ldx: 0, ldy: -8 },
-      p4: { x: 270, y: 20, kind: 'CARCASS', text: 'STUD', la: 'middle', ldx: 0, ldy: -8 },
-      datumIn: { x: 20, y: 46, kind: 'CARCASS', text: 'IN', la: 'middle', ldx: 0, ldy: 13 },
-    }
+    label: 'Sole Plate', badge: 'SP',
+    baseW: 300, baseH: 70, stretchAxis: 'w', minLen: 140, maxLen: 600,
+    body: (c) => `
+      <rect x="0" y="20" width="${c.w}" height="26" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
+      <text x="${c.w/2}" y="37" text-anchor="middle" font-size="8.5" font-weight="800" fill="#3a2410">SOLE PLATE</text>`,
+    terminals: (c) => {
+      const n = 5, margin = 30;
+      const step = (c.w - margin * 2) / (n - 1);
+      const t = { datumIn: { x: 20, y: 46, kind: 'FRAME', text: 'IN', la: 'middle', ldx: 0, ldy: 13 } };
+      for (let i = 0; i < n; i++) t['p' + i] = { x: margin + i * step, y: 20, kind: 'FRAME', text: 'STUD', la: 'middle', ldx: 0, ldy: -8 };
+      return t;
+    },
   },
 
   headPlate: {
-    label: 'Head Plate', badge: 'HP', w: 300, h: 70,
-    body: () => `
-      <rect x="0" y="20" width="300" height="26" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
-      ${[0,1,2,3,4,5].map(i => `<line x1="${i*50+8}" y1="22" x2="${i*50+8}" y2="44" stroke="#a87b45" stroke-width="0.6"/>`).join('')}
-      <text x="150" y="37" text-anchor="middle" font-size="8.5" font-weight="800" fill="#3a2410">HEAD PLATE</text>`,
-    internalLinks: () => [['p0','p1'],['p1','p2'],['p2','p3'],['p3','p4']],
-    terminals: {
-      p0: { x: 30,  y: 46, kind: 'CARCASS', text: 'STUD', la: 'middle', ldx: 0, ldy: 13 },
-      p1: { x: 90,  y: 46, kind: 'CARCASS', text: 'STUD', la: 'middle', ldx: 0, ldy: 13 },
-      p2: { x: 150, y: 46, kind: 'CARCASS', text: 'STUD', la: 'middle', ldx: 0, ldy: 13 },
-      p3: { x: 210, y: 46, kind: 'CARCASS', text: 'STUD', la: 'middle', ldx: 0, ldy: 13 },
-      p4: { x: 270, y: 46, kind: 'CARCASS', text: 'STUD', la: 'middle', ldx: 0, ldy: 13 },
-    }
+    label: 'Head Plate', badge: 'HP',
+    baseW: 300, baseH: 70, stretchAxis: 'w', minLen: 140, maxLen: 600,
+    body: (c) => `
+      <rect x="0" y="20" width="${c.w}" height="26" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
+      <text x="${c.w/2}" y="37" text-anchor="middle" font-size="8.5" font-weight="800" fill="#3a2410">HEAD PLATE</text>`,
+    terminals: (c) => {
+      const n = 5, margin = 30;
+      const step = (c.w - margin * 2) / (n - 1);
+      const t = {};
+      for (let i = 0; i < n; i++) t['p' + i] = { x: margin + i * step, y: 46, kind: 'FRAME', text: 'STUD', la: 'middle', ldx: 0, ldy: 13 };
+      return t;
+    },
   },
 
   stud: {
-    label: 'Stud', badge: 'STD', w: 40, h: 140,
-    body: () => `
-      <rect x="8" y="6" width="24" height="128" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
-      <line x1="14" y1="10" x2="14" y2="130" stroke="#a87b45" stroke-width="0.6"/>
-      <line x1="26" y1="10" x2="26" y2="130" stroke="#a87b45" stroke-width="0.6"/>
-      <text x="20" y="72" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410" transform="rotate(-90 20 72)">STUD</text>`,
-    internalLinks: () => [['top','bottom']],
-    terminals: {
-      top:    { x: 20, y: 6,   kind: 'CARCASS', text: 'TOP', la: 'middle', ldx: 0, ldy: -9 },
-      bottom: { x: 20, y: 134, kind: 'CARCASS', text: 'BTM', la: 'middle', ldx: 0, ldy: 13 },
-    }
+    label: 'Stud', badge: 'STD',
+    baseW: 40, baseH: 140, stretchAxis: 'h', minLen: 60, maxLen: 300,
+    body: (c) => `
+      <rect x="8" y="6" width="24" height="${c.h - 12}" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
+      <text x="20" y="${c.h/2}" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410" transform="rotate(-90 20 ${c.h/2})">STUD</text>`,
+    terminals: (c) => ({
+      top:    { x: 20, y: 6,      kind: 'FRAME', text: 'TOP', la: 'middle', ldx: 0, ldy: -9 },
+      bottom: { x: 20, y: c.h - 6, kind: 'FRAME', text: 'BTM', la: 'middle', ldx: 0, ldy: 13 },
+    }),
   },
 
   noggin: {
-    label: 'Noggin', badge: 'NOG', w: 90, h: 34,
-    body: () => `
-      <rect x="6" y="8" width="78" height="18" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
-      <line x1="30" y1="10" x2="30" y2="24" stroke="#a87b45" stroke-width="0.6"/>
-      <line x1="60" y1="10" x2="60" y2="24" stroke="#a87b45" stroke-width="0.6"/>
-      <text x="45" y="21" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410">NOGGIN</text>`,
-    internalLinks: () => [['left','right']],
-    terminals: {
-      left:  { x: 6,  y: 17, kind: 'CARCASS', text: 'L', la: 'end',   ldx: -9, ldy: 3 },
-      right: { x: 84, y: 17, kind: 'CARCASS', text: 'R', la: 'start', ldx: 9,  ldy: 3 },
-    }
+    label: 'Noggin', badge: 'NOG',
+    baseW: 90, baseH: 34, stretchAxis: 'w', minLen: 40, maxLen: 180,
+    body: (c) => `
+      <rect x="6" y="8" width="${c.w - 12}" height="18" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
+      <text x="${c.w/2}" y="21" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410">NOGGIN</text>`,
+    terminals: (c) => ({
+      left:  { x: 6,      y: 17, kind: 'FRAME', text: 'L', la: 'end',   ldx: -9, ldy: 3 },
+      right: { x: c.w - 6, y: 17, kind: 'FRAME', text: 'R', la: 'start', ldx: 9,  ldy: 3 },
+    }),
   },
 
   floorJoist: {
-    label: 'Joist (floor / ceiling)', badge: 'JST', w: 280, h: 54,
-    body: () => `
-      <rect x="0" y="14" width="280" height="26" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
-      ${[0,1,2,3,4].map(i => `<line x1="${i*60+16}" y1="16" x2="${i*60+16}" y2="38" stroke="#a87b45" stroke-width="0.6"/>`).join('')}
-      <text x="140" y="30" text-anchor="middle" font-size="8.5" font-weight="800" fill="#3a2410">JOIST</text>`,
-    internalLinks: () => [['endA','endB'],['endA','hangerMount']],
-    terminals: {
-      endA: { x: 6,   y: 27, kind: 'CARCASS', text: 'A',   la: 'start',  ldx: 9,  ldy: 3 },
-      endB: { x: 274, y: 27, kind: 'CARCASS', text: 'B',   la: 'end',    ldx: -9, ldy: 3 },
-      hangerMount: { x: 140, y: 40, kind: 'HANGER', text: 'HGR', la: 'middle', ldx: 0, ldy: 13 },
-    }
+    label: 'Joist (floor / ceiling)', badge: 'JST',
+    baseW: 280, baseH: 54, stretchAxis: 'w', minLen: 120, maxLen: 500,
+    body: (c) => `
+      <rect x="0" y="14" width="${c.w}" height="26" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
+      <text x="${c.w/2}" y="30" text-anchor="middle" font-size="8.5" font-weight="800" fill="#3a2410">JOIST</text>`,
+    terminals: (c) => ({
+      endA: { x: 6,      y: 27, kind: 'FRAME',  text: 'A',   la: 'start',  ldx: 9,  ldy: 3 },
+      endB: { x: c.w - 6, y: 27, kind: 'FRAME',  text: 'B',   la: 'end',    ldx: -9, ldy: 3 },
+      hangerMount: { x: c.w/2, y: 40, kind: 'HANGER', text: 'HGR', la: 'middle', ldx: 0, ldy: 13 },
+    }),
   },
 
   joistHanger: {
-    label: 'Joist Hanger', badge: 'HGR', w: 70, h: 54,
-    body: () => `
+    label: 'Joist Hanger', badge: 'HGR',
+    baseW: 70, baseH: 54, stretchAxis: null,
+    body: (c) => `
       <path d="M 8 40 L 8 14 L 20 14 L 20 30 L 50 30 L 50 14 L 62 14 L 62 40 Z" fill="#9aa3ac" stroke="#3a3f45" stroke-width="1.5"/>
       <text x="35" y="50" text-anchor="middle" font-size="6.5" font-weight="800" fill="#333">HANGER</text>`,
-    internalLinks: () => [['wallFix','joistSeat']],
-    terminals: {
-      wallFix:   { x: 6,  y: 27, kind: 'HANGER',  text: 'WALL', la: 'start', ldx: 9,  ldy: 3 },
-      joistSeat: { x: 64, y: 27, kind: 'CARCASS', text: 'SEAT', la: 'end',   ldx: -9, ldy: 3 },
-    }
+    terminals: () => ({
+      wallFix:   { x: 6,  y: 27, kind: 'HANGER', text: 'WALL', la: 'start', ldx: 9,  ldy: 3 },
+      joistSeat: { x: 64, y: 27, kind: 'FRAME',  text: 'SEAT', la: 'end',   ldx: -9, ldy: 3 },
+    }),
   },
 
   wallPlate: {
-    label: 'Wall Plate', badge: 'WP', w: 300, h: 80,
-    body: () => `
-      <rect x="0" y="24" width="300" height="26" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
-      ${[0,1,2,3,4,5].map(i => `<line x1="${i*50+8}" y1="26" x2="${i*50+8}" y2="48" stroke="#a87b45" stroke-width="0.6"/>`).join('')}
-      <text x="150" y="41" text-anchor="middle" font-size="8.5" font-weight="800" fill="#3a2410">WALL PLATE</text>`,
-    internalLinks: () => [['r0','r1'],['r1','r2'],['r2','r3'],['r3','r4'],['r0','datumIn'],['datumIn','hangerMount']],
-    terminals: {
-      r0: { x: 30,  y: 24, kind: 'CARCASS', text: 'RFTR', la: 'middle', ldx: 0, ldy: -8 },
-      r1: { x: 90,  y: 24, kind: 'CARCASS', text: 'RFTR', la: 'middle', ldx: 0, ldy: -8 },
-      r2: { x: 150, y: 24, kind: 'CARCASS', text: 'RFTR', la: 'middle', ldx: 0, ldy: -8 },
-      r3: { x: 210, y: 24, kind: 'CARCASS', text: 'RFTR', la: 'middle', ldx: 0, ldy: -8 },
-      r4: { x: 270, y: 24, kind: 'CARCASS', text: 'RFTR', la: 'middle', ldx: 0, ldy: -8 },
-      datumIn:     { x: 20,  y: 50, kind: 'CARCASS', text: 'IN',  la: 'middle', ldx: 0, ldy: 13 },
-      hangerMount: { x: 280, y: 50, kind: 'HANGER',  text: 'HGR', la: 'middle', ldx: 0, ldy: 13 },
-    }
+    label: 'Wall Plate', badge: 'WP',
+    baseW: 300, baseH: 80, stretchAxis: 'w', minLen: 140, maxLen: 600,
+    body: (c) => `
+      <rect x="0" y="24" width="${c.w}" height="26" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
+      <text x="${c.w/2}" y="41" text-anchor="middle" font-size="8.5" font-weight="800" fill="#3a2410">WALL PLATE</text>`,
+    terminals: (c) => {
+      const n = 5, margin = 30;
+      const step = (c.w - margin * 2) / (n - 1);
+      const t = {
+        datumIn:     { x: 20,      y: 50, kind: 'FRAME',  text: 'IN',  la: 'middle', ldx: 0, ldy: 13 },
+        hangerMount: { x: c.w - 20, y: 50, kind: 'HANGER', text: 'HGR', la: 'middle', ldx: 0, ldy: 13 },
+      };
+      for (let i = 0; i < n; i++) t['r' + i] = { x: margin + i * step, y: 24, kind: 'FRAME', text: 'RFTR', la: 'middle', ldx: 0, ldy: -8 };
+      return t;
+    },
   },
 
   rafter: {
-    label: 'Rafter', badge: 'RFT', w: 40, h: 130,
-    body: () => `
-      <path d="M 8 124 L 32 124 L 32 6 L 8 6 Z" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
-      <line x1="14" y1="10" x2="14" y2="120" stroke="#a87b45" stroke-width="0.6"/>
-      <line x1="26" y1="10" x2="26" y2="120" stroke="#a87b45" stroke-width="0.6"/>
-      <text x="20" y="67" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410" transform="rotate(-90 20 67)">RAFTER</text>`,
-    internalLinks: () => [['eaves','ridge']],
-    terminals: {
-      ridge: { x: 20, y: 6,   kind: 'CARCASS', text: 'RIDGE', la: 'middle', ldx: 0, ldy: -9 },
-      eaves: { x: 20, y: 124, kind: 'CARCASS', text: 'EAVES', la: 'middle', ldx: 0, ldy: 13 },
-    }
+    label: 'Rafter', badge: 'RFT',
+    baseW: 40, baseH: 130, stretchAxis: 'h', minLen: 60, maxLen: 280,
+    body: (c) => `
+      <path d="M 8 ${c.h - 6} L 32 ${c.h - 6} L 32 6 L 8 6 Z" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
+      <text x="20" y="${c.h/2}" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410" transform="rotate(-90 20 ${c.h/2})">RAFTER</text>`,
+    terminals: (c) => ({
+      ridge: { x: 20, y: 6,      kind: 'FRAME', text: 'RIDGE', la: 'middle', ldx: 0, ldy: -9 },
+      eaves: { x: 20, y: c.h - 6, kind: 'FRAME', text: 'EAVES', la: 'middle', ldx: 0, ldy: 13 },
+    }),
   },
 
   ridgeBoard: {
-    label: 'Ridge Board', badge: 'RB', w: 300, h: 60,
-    body: () => `
-      <rect x="0" y="17" width="300" height="26" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
-      ${[0,1,2,3,4,5].map(i => `<line x1="${i*50+8}" y1="19" x2="${i*50+8}" y2="41" stroke="#a87b45" stroke-width="0.6"/>`).join('')}
-      <text x="150" y="34" text-anchor="middle" font-size="8.5" font-weight="800" fill="#3a2410">RIDGE BOARD</text>`,
-    internalLinks: () => [['r0','r1'],['r1','r2'],['r2','r3'],['r3','r4']],
-    terminals: {
-      r0: { x: 30,  y: 43, kind: 'CARCASS', text: 'RFTR', la: 'middle', ldx: 0, ldy: 13 },
-      r1: { x: 90,  y: 43, kind: 'CARCASS', text: 'RFTR', la: 'middle', ldx: 0, ldy: 13 },
-      r2: { x: 150, y: 43, kind: 'CARCASS', text: 'RFTR', la: 'middle', ldx: 0, ldy: 13 },
-      r3: { x: 210, y: 43, kind: 'CARCASS', text: 'RFTR', la: 'middle', ldx: 0, ldy: 13 },
-      r4: { x: 270, y: 43, kind: 'CARCASS', text: 'RFTR', la: 'middle', ldx: 0, ldy: 13 },
-    }
+    label: 'Ridge Board', badge: 'RB',
+    baseW: 300, baseH: 60, stretchAxis: 'w', minLen: 140, maxLen: 600,
+    body: (c) => `
+      <rect x="0" y="17" width="${c.w}" height="26" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
+      <text x="${c.w/2}" y="34" text-anchor="middle" font-size="8.5" font-weight="800" fill="#3a2410">RIDGE BOARD</text>`,
+    terminals: (c) => {
+      const n = 5, margin = 30;
+      const step = (c.w - margin * 2) / (n - 1);
+      const t = {};
+      for (let i = 0; i < n; i++) t['r' + i] = { x: margin + i * step, y: 43, kind: 'FRAME', text: 'RFTR', la: 'middle', ldx: 0, ldy: 13 };
+      return t;
+    },
   },
 
   doorLining: {
-    label: 'Door Lining (frame)', badge: 'DL', w: 140, h: 160,
+    label: 'Door Lining (frame)', badge: 'DL',
+    baseW: 140, baseH: 160, stretchAxis: null,
     body: () => `
       <rect x="0" y="0" width="16" height="160" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.2"/>
       <rect x="124" y="0" width="16" height="160" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.2"/>
       <rect x="0" y="0" width="140" height="16" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.2"/>
       <text x="70" y="94" text-anchor="middle" font-size="7.5" font-weight="800" fill="#3a2410" transform="rotate(-90 70 94)">DOOR LINING</text>`,
-    internalLinks: () => [['jambL1','jambL2'],['jambL1','head'],['head','jambR1'],['jambR1','jambR2'],['jambL1','hingeUpper'],['hingeUpper','hingeLower'],['jambR1','trimR']],
-    terminals: {
-      jambL1: { x: 6,   y: 40,  kind: 'CARCASS', text: 'JL1', la: 'start', ldx: 9,  ldy: 3 },
-      jambL2: { x: 6,   y: 120, kind: 'CARCASS', text: 'JL2', la: 'start', ldx: 9,  ldy: 3 },
-      jambR1: { x: 134, y: 40,  kind: 'CARCASS', text: 'JR1', la: 'end',   ldx: -9, ldy: 3 },
-      jambR2: { x: 134, y: 120, kind: 'CARCASS', text: 'JR2', la: 'end',   ldx: -9, ldy: 3 },
-      head:   { x: 70,  y: 6,   kind: 'CARCASS', text: 'HEAD', la: 'middle', ldx: 0, ldy: -9 },
-      hingeUpper: { x: 6,   y: 65, kind: 'FINISH', text: 'HNG', la: 'start', ldx: 9,  ldy: 3 },
-      hingeLower: { x: 6,   y: 95, kind: 'FINISH', text: 'HNG', la: 'start', ldx: 9,  ldy: 3 },
-      trimR:      { x: 134, y: 80, kind: 'FINISH', text: 'TRM', la: 'end',   ldx: -9, ldy: 3 },
-    }
+    terminals: () => ({
+      jambL1: { x: 6,   y: 40,  kind: 'FRAME', text: 'JL1', la: 'start', ldx: 9,  ldy: 3 },
+      jambL2: { x: 6,   y: 120, kind: 'FRAME', text: 'JL2', la: 'start', ldx: 9,  ldy: 3 },
+      jambR1: { x: 134, y: 40,  kind: 'FRAME', text: 'JR1', la: 'end',   ldx: -9, ldy: 3 },
+      jambR2: { x: 134, y: 120, kind: 'FRAME', text: 'JR2', la: 'end',   ldx: -9, ldy: 3 },
+      head:   { x: 70,  y: 6,   kind: 'FRAME', text: 'HEAD', la: 'middle', ldx: 0, ldy: -9 },
+      hingeUpper: { x: 6,   y: 65, kind: 'TRIM', text: 'HNG', la: 'start', ldx: 9,  ldy: 3 },
+      hingeLower: { x: 6,   y: 95, kind: 'TRIM', text: 'HNG', la: 'start', ldx: 9,  ldy: 3 },
+      trimR:      { x: 134, y: 80, kind: 'TRIM', text: 'TRM', la: 'end',   ldx: -9, ldy: 3 },
+    }),
   },
 
   doorLeaf: {
-    label: 'Door Leaf', badge: 'DR', w: 90, h: 170,
+    label: 'Door Leaf', badge: 'DR',
+    baseW: 90, baseH: 170, stretchAxis: null,
     body: () => `
       <rect x="6" y="6" width="78" height="158" fill="#dcc9a0" stroke="#7a4a20" stroke-width="1.5"/>
       <rect x="16" y="16" width="58" height="60" fill="none" stroke="#a87b45" stroke-width="1"/>
       <rect x="16" y="86" width="58" height="60" fill="none" stroke="#a87b45" stroke-width="1"/>
       <circle cx="74" cy="85" r="2.6" fill="#7a4a20"/>
       <text x="45" y="167" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410">DOOR LEAF</text>`,
-    internalLinks: () => [['hingeTop','hingeBottom']],
-    terminals: {
-      hingeTop:    { x: 6, y: 30,  kind: 'FINISH', text: 'HNG', la: 'start', ldx: 9, ldy: 3 },
-      hingeBottom: { x: 6, y: 140, kind: 'FINISH', text: 'HNG', la: 'start', ldx: 9, ldy: 3 },
-    }
+    terminals: () => ({
+      hingeTop:    { x: 6, y: 30,  kind: 'TRIM', text: 'HNG', la: 'start', ldx: 9, ldy: 3 },
+      hingeBottom: { x: 6, y: 140, kind: 'TRIM', text: 'HNG', la: 'start', ldx: 9, ldy: 3 },
+    }),
   },
 
   skirting: {
-    label: 'Skirting', badge: 'SKT', w: 200, h: 30,
-    body: () => `
-      <rect x="6" y="10" width="188" height="10" fill="#e6d3a8" stroke="#7a4a20" stroke-width="1.2"/>
-      <text x="100" y="27" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410">SKIRTING</text>`,
-    internalLinks: () => [['left','right']],
-    terminals: {
-      left:  { x: 6,   y: 15, kind: 'FINISH', text: 'L', la: 'start', ldx: 9,  ldy: 3 },
-      right: { x: 194, y: 15, kind: 'FINISH', text: 'R', la: 'end',   ldx: -9, ldy: 3 },
-    }
+    label: 'Skirting', badge: 'SKT',
+    baseW: 200, baseH: 30, stretchAxis: 'w', minLen: 80, maxLen: 400,
+    body: (c) => `
+      <rect x="6" y="10" width="${c.w - 12}" height="10" fill="#e6d3a8" stroke="#7a4a20" stroke-width="1.2"/>
+      <text x="${c.w/2}" y="27" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410">SKIRTING</text>`,
+    terminals: (c) => ({
+      left:  { x: 6,      y: 15, kind: 'TRIM', text: 'L', la: 'start', ldx: 9,  ldy: 3 },
+      right: { x: c.w - 6, y: 15, kind: 'TRIM', text: 'R', la: 'end',   ldx: -9, ldy: 3 },
+    }),
   },
 
   architrave: {
-    label: 'Architrave', badge: 'ARC', w: 140, h: 30,
-    body: () => `
-      <rect x="6" y="10" width="128" height="8" fill="#e6d3a8" stroke="#7a4a20" stroke-width="1.2"/>
-      <text x="70" y="27" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410">ARCHITRAVE</text>`,
-    internalLinks: () => [['left','right']],
-    terminals: {
-      left:  { x: 6,   y: 14, kind: 'FINISH', text: 'L', la: 'start', ldx: 9,  ldy: 3 },
-      right: { x: 134, y: 14, kind: 'FINISH', text: 'R', la: 'end',   ldx: -9, ldy: 3 },
-    }
+    label: 'Architrave', badge: 'ARC',
+    baseW: 140, baseH: 30, stretchAxis: 'w', minLen: 60, maxLen: 300,
+    body: (c) => `
+      <rect x="6" y="10" width="${c.w - 12}" height="8" fill="#e6d3a8" stroke="#7a4a20" stroke-width="1.2"/>
+      <text x="${c.w/2}" y="27" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410">ARCHITRAVE</text>`,
+    terminals: (c) => ({
+      left:  { x: 6,      y: 14, kind: 'TRIM', text: 'L', la: 'start', ldx: 9,  ldy: 3 },
+      right: { x: c.w - 6, y: 14, kind: 'TRIM', text: 'R', la: 'end',   ldx: -9, ldy: 3 },
+    }),
   },
 
   stairStringer: {
-    label: 'Stair Stringer', badge: 'STR', w: 320, h: 60,
-    body: () => `
-      <rect x="0" y="20" width="320" height="26" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
-      ${[0,1,2,3,4].map(i => `<line x1="${i*60+30}" y1="22" x2="${i*60+30}" y2="44" stroke="#a87b45" stroke-width="0.6"/>`).join('')}
-      <text x="160" y="37" text-anchor="middle" font-size="8.5" font-weight="800" fill="#3a2410">STAIR STRINGER</text>`,
-    internalLinks: () => [['base','t0'],['t0','t1'],['t1','t2'],['t2','t3'],['t3','top']],
-    terminals: {
-      base: { x: 20,  y: 46, kind: 'CARCASS', text: 'BASE', la: 'middle', ldx: 0, ldy: 13 },
-      t0: { x: 80,  y: 20, kind: 'CARCASS', text: 'TRD', la: 'middle', ldx: 0, ldy: -8 },
-      t1: { x: 140, y: 20, kind: 'CARCASS', text: 'TRD', la: 'middle', ldx: 0, ldy: -8 },
-      t2: { x: 200, y: 20, kind: 'CARCASS', text: 'TRD', la: 'middle', ldx: 0, ldy: -8 },
-      t3: { x: 260, y: 20, kind: 'CARCASS', text: 'TRD', la: 'middle', ldx: 0, ldy: -8 },
-      top: { x: 300, y: 46, kind: 'CARCASS', text: 'TOP', la: 'middle', ldx: 0, ldy: 13 },
-    }
+    label: 'Stair Stringer', badge: 'STR',
+    baseW: 320, baseH: 60, stretchAxis: 'w', minLen: 160, maxLen: 600,
+    body: (c) => `
+      <rect x="0" y="20" width="${c.w}" height="26" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
+      <text x="${c.w/2}" y="37" text-anchor="middle" font-size="8.5" font-weight="800" fill="#3a2410">STAIR STRINGER</text>`,
+    terminals: (c) => {
+      const n = 4, lo = 70, hi = c.w - 70;
+      const step = (hi - lo) / (n - 1);
+      const t = {
+        base: { x: 20,      y: 46, kind: 'FRAME', text: 'BASE', la: 'middle', ldx: 0, ldy: 13 },
+        top:  { x: c.w - 20, y: 46, kind: 'FRAME', text: 'TOP',  la: 'middle', ldx: 0, ldy: 13 },
+      };
+      for (let i = 0; i < n; i++) t['t' + i] = { x: lo + i * step, y: 20, kind: 'FRAME', text: 'TRD', la: 'middle', ldx: 0, ldy: -8 };
+      return t;
+    },
   },
 
   stairTread: {
-    label: 'Stair Tread', badge: 'TRD', w: 120, h: 30,
+    label: 'Stair Tread', badge: 'TRD',
+    baseW: 120, baseH: 30, stretchAxis: null,
     body: () => `
       <rect x="6" y="10" width="108" height="10" fill="#dcc9a0" stroke="#7a4a20" stroke-width="1.2"/>
       <text x="60" y="27" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410">TREAD</text>`,
-    internalLinks: () => [['leftEnd','rightEnd']],
-    terminals: {
-      leftEnd:  { x: 6,   y: 15, kind: 'CARCASS', text: 'L', la: 'start', ldx: 9,  ldy: 3 },
-      rightEnd: { x: 114, y: 15, kind: 'CARCASS', text: 'R', la: 'end',   ldx: -9, ldy: 3 },
-    }
+    terminals: () => ({
+      leftEnd:  { x: 6,   y: 15, kind: 'FRAME', text: 'L', la: 'start', ldx: 9,  ldy: 3 },
+      rightEnd: { x: 114, y: 15, kind: 'FRAME', text: 'R', la: 'end',   ldx: -9, ldy: 3 },
+    }),
   },
 };
 
@@ -555,43 +510,48 @@ const PALETTE_ORDER = [
 // Unit numbers/titles verified against the current qualification handbook.
 // Unit 211 (Set up and operate a circular saw) is deliberately excluded —
 // it's a portable power tool safety unit, not a build-and-check exercise.
+//
+// Each buildable item's `build` list places components left-to-right; a step
+// with snapOwn/snapTo positions that component so its own named point lands
+// exactly on the target's, then locks it — demonstrating the technique on
+// the first instance of a repeated element (e.g. the first stud, the first
+// joist) and leaving further repeats placed-but-unlocked for the student to
+// finish themselves.
 
 const CURRICULUM = {
   unit_207: {
     label: 'Unit 207',
     qualification: 'Carry out first fix flooring and roofing',
     items: [
-      { name: 'Floor joist run on a sole/wall plate', components: ['groundDatum', 'solePlate', 'floorJoist ×3', 'noggin ×2'], buildable: true,
-        starter: ['groundDatum', 'solePlate', 'floorJoist', 'floorJoist', 'floorJoist', 'noggin', 'noggin'],
-        wiring: [
-          { from: ['gnd','carcassOut'], to: ['sp','datumIn'], type: 'CARCASS' },
-          { from: ['sp','p0'], to: ['j1','endA'], type: 'CARCASS' },
-          { from: ['sp','p2'], to: ['j2','endA'], type: 'CARCASS' },
-          { from: ['sp','p4'], to: ['j3','endA'], type: 'CARCASS' },
+      { name: 'Floor joist run on a sole plate', components: ['groundDatum', 'solePlate', 'floorJoist ×3', 'noggin ×2'], buildable: true,
+        build: [
+          { alias: 'gnd', type: 'groundDatum' },
+          { alias: 'sp', type: 'solePlate', snapOwn: 'datumIn', snapTo: ['gnd', 'a0'] },
+          { alias: 'j1', type: 'floorJoist', snapOwn: 'endA', snapTo: ['sp', 'p0'] },
+          { alias: 'j2', type: 'floorJoist' },
+          { alias: 'j3', type: 'floorJoist' },
+          { alias: 'n1', type: 'noggin' },
+          { alias: 'n2', type: 'noggin' },
         ],
-        keys: { gnd: 0, sp: 1, j1: 2, j2: 3, j3: 4, n1: 5, n2: 6 },
-        notes: 'A joist run bearing on a plate, with noggin blocking between joists to stop them twisting under load.' },
+        notes: 'A joist bearing on a sole plate, with noggin blocking to stop joists twisting under load. The first joist is snapped and locked to show the technique — fix the rest yourself.' },
       { name: 'Trimmed joist with a joist hanger', components: ['groundDatum', 'floorJoist ×2 (trimmer + hung joist)', 'joistHanger'], buildable: true,
-        starter: ['groundDatum', 'floorJoist', 'joistHanger', 'floorJoist'],
-        wiring: [
-          { from: ['gnd','carcassOut'], to: ['trm','endA'], type: 'CARCASS' },
-          { from: ['trm','hangerMount'], to: ['hgr','wallFix'], type: 'HANGER' },
-          { from: ['hgr','joistSeat'], to: ['jst','endA'], type: 'CARCASS' },
+        build: [
+          { alias: 'gnd', type: 'groundDatum' },
+          { alias: 'trm', type: 'floorJoist', snapOwn: 'endA', snapTo: ['gnd', 'a0'] },
+          { alias: 'hgr', type: 'joistHanger', snapOwn: 'wallFix', snapTo: ['trm', 'hangerMount'] },
+          { alias: 'jst', type: 'floorJoist', snapOwn: 'endA', snapTo: ['hgr', 'joistSeat'] },
         ],
-        keys: { gnd: 0, trm: 1, hgr: 2, jst: 3 },
-        notes: 'A joist framing into a trimmer around an opening — the hanger bracket itself uses hanger-type fixings; the joist sitting in the hanger is a normal carcass connection.' },
-      { name: 'Roof — rafter pair to a ridge board', components: ['groundDatum', 'wallPlate ×2', 'rafter ×2', 'ridgeBoard'], buildable: true,
-        starter: ['groundDatum', 'wallPlate', 'wallPlate', 'rafter', 'rafter', 'ridgeBoard'],
-        wiring: [
-          { from: ['gnd','carcassOut'], to: ['wp1','datumIn'], type: 'CARCASS' },
-          { from: ['gnd','carcassOut'], to: ['wp2','datumIn'], type: 'CARCASS' },
-          { from: ['wp1','r0'], to: ['r1','eaves'], type: 'CARCASS' },
-          { from: ['wp2','r0'], to: ['r2','eaves'], type: 'CARCASS' },
-          { from: ['r1','ridge'], to: ['rb','r0'], type: 'CARCASS' },
-          { from: ['r2','ridge'], to: ['rb','r1'], type: 'CARCASS' },
+        notes: 'A joist framing into a trimmer around an opening. The hanger bracket mounts to the trimmer’s hanger point; the joist itself just seats in the hanger.' },
+      { name: 'Roof — rafter to a ridge board', components: ['groundDatum', 'wallPlate ×2', 'rafter ×2', 'ridgeBoard'], buildable: true,
+        build: [
+          { alias: 'gnd', type: 'groundDatum' },
+          { alias: 'wp1', type: 'wallPlate', snapOwn: 'datumIn', snapTo: ['gnd', 'a0'] },
+          { alias: 'wp2', type: 'wallPlate' },
+          { alias: 'r1', type: 'rafter', snapOwn: 'eaves', snapTo: ['wp1', 'r0'] },
+          { alias: 'r2', type: 'rafter' },
+          { alias: 'rb', type: 'ridgeBoard', snapOwn: 'r0', snapTo: ['r1', 'ridge'] },
         ],
-        keys: { gnd: 0, wp1: 1, wp2: 2, r1: 3, r2: 4, rb: 5 },
-        notes: 'A basic couple roof: two wall plates, a pair of rafters, and a ridge board.' },
+        notes: 'A basic couple roof: wall plate → rafter → ridge board. Bring in the second wall plate and rafter to complete the pair.' },
     ]
   },
   unit_208: {
@@ -599,47 +559,40 @@ const CURRICULUM = {
     qualification: 'Carry out first fix frames, partitions and stairs',
     items: [
       { name: 'Timber stud partition', components: ['groundDatum', 'solePlate', 'stud ×4', 'noggin ×2', 'headPlate'], buildable: true,
-        starter: ['groundDatum', 'solePlate', 'stud', 'stud', 'stud', 'stud', 'noggin', 'noggin', 'headPlate'],
-        wiring: [
-          { from: ['gnd','carcassOut'], to: ['sp','datumIn'], type: 'CARCASS' },
-          { from: ['sp','p0'], to: ['s1','bottom'], type: 'CARCASS' },
-          { from: ['sp','p1'], to: ['s2','bottom'], type: 'CARCASS' },
-          { from: ['sp','p3'], to: ['s3','bottom'], type: 'CARCASS' },
-          { from: ['sp','p4'], to: ['s4','bottom'], type: 'CARCASS' },
-          { from: ['s1','top'], to: ['hp','p0'], type: 'CARCASS' },
-          { from: ['s2','top'], to: ['hp','p1'], type: 'CARCASS' },
-          { from: ['s3','top'], to: ['hp','p3'], type: 'CARCASS' },
-          { from: ['s4','top'], to: ['hp','p4'], type: 'CARCASS' },
+        build: [
+          { alias: 'gnd', type: 'groundDatum' },
+          { alias: 'sp', type: 'solePlate', snapOwn: 'datumIn', snapTo: ['gnd', 'a0'] },
+          { alias: 's1', type: 'stud', snapOwn: 'bottom', snapTo: ['sp', 'p0'] },
+          { alias: 's2', type: 'stud' },
+          { alias: 's3', type: 'stud' },
+          { alias: 's4', type: 'stud' },
+          { alias: 'n1', type: 'noggin' },
+          { alias: 'n2', type: 'noggin' },
+          { alias: 'hp', type: 'headPlate', snapOwn: 'p0', snapTo: ['s1', 'top'] },
         ],
-        keys: { gnd: 0, sp: 1, s1: 2, s2: 3, s3: 4, s4: 5, n1: 6, n2: 7, hp: 8 },
-        notes: 'Sole plate → studs at regular centres → head plate, the core of first-fix partition work.' },
+        notes: 'Sole plate → studs at regular centres → head plate. The first stud shows the chain from datum to head plate — bring in studs 2–4 yourself.' },
       { name: 'Door opening framed in a stud partition', components: ['groundDatum', 'solePlate', 'stud ×2', 'headPlate', 'doorLining'], buildable: true,
-        starter: ['groundDatum', 'solePlate', 'stud', 'stud', 'headPlate', 'doorLining'],
-        wiring: [
-          { from: ['gnd','carcassOut'], to: ['sp','datumIn'], type: 'CARCASS' },
-          { from: ['sp','p0'], to: ['s1','bottom'], type: 'CARCASS' },
-          { from: ['sp','p4'], to: ['s2','bottom'], type: 'CARCASS' },
-          { from: ['s1','top'], to: ['hp','p0'], type: 'CARCASS' },
-          { from: ['s2','top'], to: ['hp','p4'], type: 'CARCASS' },
-          { from: ['s1','top'], to: ['dl','jambL1'], type: 'CARCASS' },
-          { from: ['s2','top'], to: ['dl','jambR1'], type: 'CARCASS' },
+        build: [
+          { alias: 'gnd', type: 'groundDatum' },
+          { alias: 'sp', type: 'solePlate', snapOwn: 'datumIn', snapTo: ['gnd', 'a0'] },
+          { alias: 's1', type: 'stud', snapOwn: 'bottom', snapTo: ['sp', 'p0'] },
+          { alias: 's2', type: 'stud' },
+          { alias: 'hp', type: 'headPlate', snapOwn: 'p0', snapTo: ['s1', 'top'] },
+          { alias: 'dl', type: 'doorLining', snapOwn: 'jambL1', snapTo: ['s1', 'top'] },
         ],
-        keys: { gnd: 0, sp: 1, s1: 2, s2: 3, hp: 4, dl: 5 },
-        notes: 'The trimming studs either side of the opening carry the door lining as well as the head plate above.' },
+        notes: 'The trimming stud carries both the head plate above and the door lining beside it.' },
       { name: 'Straight flight staircase', components: ['groundDatum ×2', 'stairStringer ×2', 'stairTread ×4'], buildable: true,
-        starter: ['groundDatum', 'groundDatum', 'stairStringer', 'stairStringer', 'stairTread', 'stairTread', 'stairTread', 'stairTread'],
-        wiring: [
-          { from: ['gLo','carcassOut'], to: ['st1','base'], type: 'CARCASS' },
-          { from: ['gLo','carcassOut'], to: ['st2','base'], type: 'CARCASS' },
-          { from: ['gHi','carcassOut'], to: ['st1','top'], type: 'CARCASS' },
-          { from: ['gHi','carcassOut'], to: ['st2','top'], type: 'CARCASS' },
-          { from: ['st1','t0'], to: ['t1','leftEnd'], type: 'CARCASS' },
-          { from: ['st2','t0'], to: ['t1','rightEnd'], type: 'CARCASS' },
-          { from: ['st1','t1'], to: ['t2','leftEnd'], type: 'CARCASS' },
-          { from: ['st2','t1'], to: ['t2','rightEnd'], type: 'CARCASS' },
+        build: [
+          { alias: 'gLo', type: 'groundDatum' },
+          { alias: 'gHi', type: 'groundDatum' },
+          { alias: 'st1', type: 'stairStringer', snapOwn: 'base', snapTo: ['gLo', 'a0'] },
+          { alias: 'st2', type: 'stairStringer' },
+          { alias: 't1', type: 'stairTread' },
+          { alias: 't2', type: 'stairTread' },
+          { alias: 't3', type: 'stairTread' },
+          { alias: 't4', type: 'stairTread' },
         ],
-        keys: { gLo: 0, gHi: 1, st1: 2, st2: 3, t1: 4, t2: 5, t3: 6, t4: 7 },
-        notes: 'Two datums represent the lower and upper floor levels a straight flight rises between — each stringer must read true at both ends.' },
+        notes: 'Two datums represent the lower and upper floor levels a straight flight rises between. The first stringer’s base is snapped to show the technique — it still needs its top locked to the upper datum, the second stringer, and the treads housed between them.' },
     ]
   },
   unit_209: {
@@ -647,31 +600,26 @@ const CURRICULUM = {
     qualification: 'Carry out second fixing operations',
     items: [
       { name: 'Hang a door', components: ['groundDatum', 'solePlate', 'stud ×2', 'headPlate', 'doorLining', 'doorLeaf'], buildable: true,
-        starter: ['groundDatum', 'solePlate', 'stud', 'stud', 'headPlate', 'doorLining', 'doorLeaf'],
-        wiring: [
-          { from: ['gnd','carcassOut'], to: ['sp','datumIn'], type: 'CARCASS' },
-          { from: ['sp','p0'], to: ['s1','bottom'], type: 'CARCASS' },
-          { from: ['sp','p4'], to: ['s2','bottom'], type: 'CARCASS' },
-          { from: ['s1','top'], to: ['hp','p0'], type: 'CARCASS' },
-          { from: ['s2','top'], to: ['hp','p4'], type: 'CARCASS' },
-          { from: ['s1','top'], to: ['dl','jambL1'], type: 'CARCASS' },
-          { from: ['s2','top'], to: ['dl','jambR1'], type: 'CARCASS' },
-          { from: ['dl','hingeUpper'], to: ['dr','hingeTop'], type: 'FINISH' },
-          { from: ['dl','hingeLower'], to: ['dr','hingeBottom'], type: 'FINISH' },
+        build: [
+          { alias: 'gnd', type: 'groundDatum' },
+          { alias: 'sp', type: 'solePlate', snapOwn: 'datumIn', snapTo: ['gnd', 'a0'] },
+          { alias: 's1', type: 'stud', snapOwn: 'bottom', snapTo: ['sp', 'p0'] },
+          { alias: 's2', type: 'stud' },
+          { alias: 'hp', type: 'headPlate', snapOwn: 'p0', snapTo: ['s1', 'top'] },
+          { alias: 'dl', type: 'doorLining', snapOwn: 'jambL1', snapTo: ['s1', 'top'] },
+          { alias: 'dr', type: 'doorLeaf', snapOwn: 'hingeTop', snapTo: ['dl', 'hingeUpper'] },
         ],
-        keys: { gnd: 0, sp: 1, s1: 2, s2: 3, hp: 4, dl: 5, dr: 6 },
-        notes: 'The lining must already read true before the leaf is hung — hinges are finish fixings, not structural ones.' },
+        notes: 'The lining must already read true before the leaf is hung — hinges are a finish-fix, not a structural one.' },
       { name: 'Skirting and architrave around a door', components: ['groundDatum', 'doorLining', 'architrave ×2', 'skirting ×2'], buildable: true,
-        starter: ['groundDatum', 'doorLining', 'architrave', 'architrave', 'skirting', 'skirting'],
-        wiring: [
-          { from: ['gnd','carcassOut'], to: ['dl','jambL1'], type: 'CARCASS' },
-          { from: ['dl','hingeUpper'], to: ['a1','left'], type: 'FINISH' },
-          { from: ['dl','trimR'], to: ['a2','right'], type: 'FINISH' },
-          { from: ['gnd','finishOut'], to: ['sk1','left'], type: 'FINISH' },
-          { from: ['gnd','finishOut'], to: ['sk2','left'], type: 'FINISH' },
+        build: [
+          { alias: 'gnd', type: 'groundDatum' },
+          { alias: 'dl', type: 'doorLining', snapOwn: 'jambL1', snapTo: ['gnd', 'a0'] },
+          { alias: 'a1', type: 'architrave', snapOwn: 'left', snapTo: ['dl', 'hingeUpper'] },
+          { alias: 'a2', type: 'architrave' },
+          { alias: 'sk1', type: 'skirting', snapOwn: 'left', snapTo: ['gnd', 'a1'] },
+          { alias: 'sk2', type: 'skirting' },
         ],
-        keys: { gnd: 0, dl: 1, a1: 2, a2: 3, sk1: 4, sk2: 5 },
-        notes: 'Second fix trim: architrave dresses the lining, skirting runs along the wall/floor junction — both are finish fixings.' },
+        notes: 'Second-fix trim: architrave dresses the lining, skirting runs along the wall/floor junction.' },
     ]
   },
   reference_only: {
@@ -692,74 +640,38 @@ const CURRICULUM = {
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
-let state = { components: [], fixings: [], level: null };
+let state = { components: [], level: null };
 let nextId = 1;
-let selection = null;             // {type:'component'|'fixing', id}
-let selectedFixing = null;        // 'CARCASS' | 'HANGER' | 'FINISH' | null
-let drawing = null;               // {type, from:{compId,key}, points:[{x,y}]}
-let lastPointerPt = null;
+let selection = null;             // {type:'component', id}
 let draggingComp = null;          // {id, offX, offY, startSnapshot}
+let draggingResize = null;        // {id}
 let draggingLevel = null;         // {offX, offY}
 let snapEnabled = true;
 let zoomPct = 100;
+let liveSnapPreview = null;       // {x,y} of the point currently being highlighted as a snap target
 
 const LEVEL_W = 160, LEVEL_H = 46;
 
 const boardSvg = document.getElementById('boardSvg');
 const componentsG = document.getElementById('componentsLayer');
-const fixingsG = document.getElementById('fixingsLayer');
-const pointsG = document.getElementById('pointsLayer');
-const previewG = document.getElementById('previewLayer');
+const snapPreviewG = document.getElementById('snapPreviewLayer');
 const levelG = document.getElementById('levelLayer');
 const boardScroll = document.getElementById('boardScroll');
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-
-function snap(pt) {
-  if (!snapEnabled) return pt;
-  return { x: Math.round(pt.x / GRID) * GRID, y: Math.round(pt.y / GRID) * GRID };
-}
+function snap(v) { return snapEnabled ? Math.round(v / GRID) * GRID : v; }
 
 function findComp(id) { return state.components.find(c => c.id === id); }
+
+function compTerminals(c) { return COMP_DEFS[c.type].terminals(c); }
 
 function termPos(compId, key) {
   const comp = findComp(compId);
   if (!comp) return { x: 0, y: 0 };
-  const t = COMP_DEFS[comp.type].terminals[key];
+  const t = compTerminals(comp)[key];
   return { x: comp.x + t.x, y: comp.y + t.y };
-}
-
-function kindOfPoint(compId, key) {
-  const comp = findComp(compId);
-  if (!comp) return null;
-  const t = COMP_DEFS[comp.type].terminals[key];
-  return t ? t.kind : null;
-}
-
-function findNearestPoint(pt, maxDist) {
-  let best = null, bestDist = maxDist;
-  state.components.forEach(c => {
-    const def = COMP_DEFS[c.type];
-    Object.entries(def.terminals).forEach(([key, t]) => {
-      const tx = c.x + t.x, ty = c.y + t.y;
-      const d = Math.hypot(pt.x - tx, pt.y - ty);
-      if (d <= bestDist) { bestDist = d; best = { compId: c.id, key }; }
-    });
-  });
-  return best;
-}
-
-function findNearestComponent(pt, maxDist) {
-  let best = null, bestDist = maxDist;
-  state.components.forEach(c => {
-    const def = COMP_DEFS[c.type];
-    const cx = c.x + def.w / 2, cy = c.y + def.h / 2;
-    const d = Math.hypot(pt.x - cx, pt.y - cy) - Math.max(def.w, def.h) / 2;
-    if (d <= bestDist) { bestDist = d; best = c.id; }
-  });
-  return best;
 }
 
 function escapeHtml(s) {
@@ -774,150 +686,138 @@ function getBoardPoint(e) {
 
 function computeNextId(s) {
   let max = 0;
-  [...s.components, ...s.fixings].forEach(o => {
-    const m = /(\d+)$/.exec(o.id || '');
-    if (m) max = Math.max(max, parseInt(m[1], 10));
-  });
+  s.components.forEach(o => { const m = /(\d+)$/.exec(o.id || ''); if (m) max = Math.max(max, parseInt(m[1], 10)); });
   return max + 1;
 }
 
-function flashStatus(msg) {
-  document.getElementById('actionStatus').textContent = msg;
+function flashStatus(msg) { document.getElementById('actionStatus').textContent = msg; }
+
+// Find the closest compatible point on ANY other component to one of this
+// component's own points, at its CURRENT position — used both for the
+// snap-on-release and for deciding whether Lock is currently allowed.
+function findBestSnap(comp, maxDist) {
+  const myPoints = compTerminals(comp);
+  let best = null, bestDist = maxDist;
+  Object.entries(myPoints).forEach(([myKey, myT]) => {
+    const myAbs = { x: comp.x + myT.x, y: comp.y + myT.y };
+    state.components.forEach(other => {
+      if (other.id === comp.id) return;
+      const oPoints = compTerminals(other);
+      Object.entries(oPoints).forEach(([oKey, oT]) => {
+        if (!pointsCompatible(myT.kind, oT.kind)) return;
+        const oAbs = { x: other.x + oT.x, y: other.y + oT.y };
+        const d = Math.hypot(myAbs.x - oAbs.x, myAbs.y - oAbs.y);
+        if (d <= bestDist) { bestDist = d; best = { myKey, otherCompId: other.id, otherKey: oKey, myAbs, oAbs }; }
+      });
+    });
+  });
+  return best;
 }
 
 // ── STRUCTURE ANALYSIS ───────────────────────────────────────────────────────
-// Mirrors a union-find/flood-fill circuit analyser, but for physical
-// continuity instead of electrical continuity: a fixing only joins the
-// "trusted" graph when its own type matches BOTH connection points' declared
-// kind, and every component's internalLinks() bonds its own points together
-// because it's genuinely one rigid piece. Trueness floods outward from every
-// Ground / Floor Datum's own points.
+// Only LOCKED components (plus the always-true Ground/Floor Datum) take part.
+// Two points are joined if they're locked-in-place and exactly coincide —
+// which can only happen because the snap mechanic put them there, so kinds
+// are already guaranteed compatible by construction.
 
 function analyzeStructure() {
   const nk = (compId, key) => compId + '|' + key;
+  const parent = new Map();
+  function find(x) { let r = x; while (parent.get(r) !== r) r = parent.get(r); while (parent.get(x) !== r) { const n = parent.get(x); parent.set(x, r); x = n; } return r; }
+  function union(a, b) { const ra = find(a), rb = find(b); if (ra !== rb) parent.set(ra, rb); }
 
-  const fixingInfo = new Map();
-  state.fixings.forEach(f => {
-    const fromKind = kindOfPoint(f.from.compId, f.from.key);
-    const toKind = kindOfPoint(f.to.compId, f.to.key);
-    fixingInfo.set(f.id, { fromKind, toKind, fromBad: fromKind !== f.type, toBad: toKind !== f.type });
-  });
-
-  const adj = new Map();
-  const link = (a, b) => { if (!adj.has(a)) adj.set(a, []); adj.get(a).push(b); };
-  state.fixings.forEach(f => {
-    const info = fixingInfo.get(f.id);
-    if (info.fromBad || info.toBad) return;
-    const a = nk(f.from.compId, f.from.key), b = nk(f.to.compId, f.to.key);
-    link(a, b); link(b, a);
-  });
+  const nodes = []; // {compId, key, x, y}
   state.components.forEach(c => {
-    const def = COMP_DEFS[c.type];
-    if (def.internalLinks) def.internalLinks(c).forEach(([k1, k2]) => { const a = nk(c.id, k1), b = nk(c.id, k2); link(a, b); link(b, a); });
+    if (c.type !== 'groundDatum' && !c.locked) return;
+    const pts = compTerminals(c);
+    Object.entries(pts).forEach(([key, t]) => {
+      const nkey = nk(c.id, key);
+      parent.set(nkey, nkey);
+      nodes.push({ compId: c.id, key, x: c.x + t.x, y: c.y + t.y });
+    });
   });
-
-  const trueSet = new Set();
-  const queue = [];
-  state.components.forEach(c => {
-    if (c.type !== 'groundDatum') return;
-    Object.keys(COMP_DEFS[c.type].terminals).forEach(k => { const n = nk(c.id, k); if (!trueSet.has(n)) { trueSet.add(n); queue.push(n); } });
-  });
-  while (queue.length) {
-    const node = queue.shift();
-    (adj.get(node) || []).forEach(next => { if (!trueSet.has(next)) { trueSet.add(next); queue.push(next); } });
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      if (nodes[i].compId === nodes[j].compId) continue;
+      if (Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y) <= LOCK_EPSILON) {
+        union(nk(nodes[i].compId, nodes[i].key), nk(nodes[j].compId, nodes[j].key));
+      }
+    }
   }
 
-  const faults = [];
-  state.fixings.forEach(f => {
-    const info = fixingInfo.get(f.id);
-    if (!info.fromBad && !info.toBad) return;
-    const fromComp = findComp(f.from.compId), toComp = findComp(f.to.compId);
-    const fromLabel = fromComp ? `${COMP_DEFS[fromComp.type].label} (${f.from.key})` : 'a point';
-    const toLabel = toComp ? `${COMP_DEFS[toComp.type].label} (${f.to.key})` : 'a point';
-    let message;
-    if (info.fromBad && info.toBad) {
-      message = `${FIXING_NAME[f.type]} fixing bridges ${fromLabel} straight to ${toLabel} — two different fixing types joined together.`;
-    } else if (info.toBad) {
-      message = `${FIXING_NAME[f.type]} fixing from ${fromLabel} lands on a ${KIND_NAME[info.toKind] || info.toKind}-type point at ${toLabel} — wrong fixing for that point.`;
-    } else {
-      message = `${FIXING_NAME[f.type]} fixing from ${toLabel} lands on a ${KIND_NAME[info.fromKind] || info.fromKind}-type point at ${fromLabel} — wrong fixing for that point.`;
-    }
-    faults.push({ fixingId: f.id, message });
+  const trueSet = new Set();
+  state.components.forEach(c => {
+    if (c.type !== 'groundDatum') return;
+    Object.keys(compTerminals(c)).forEach(k => trueSet.add(find(nk(c.id, k))));
   });
 
-  return { trueSet, fixingInfo, faults, nk };
+  return { find, nk, trueSet };
 }
 
 function isCompTrue(analysis, compId) {
   const comp = findComp(compId);
-  if (!comp) return false;
-  const firstKey = Object.keys(COMP_DEFS[comp.type].terminals)[0];
-  return analysis.trueSet.has(analysis.nk(compId, firstKey));
+  if (!comp || (!comp.locked && comp.type !== 'groundDatum')) return false;
+  const firstKey = Object.keys(compTerminals(comp))[0];
+  return analysis.trueSet.has(analysis.find(analysis.nk(compId, firstKey)));
 }
 
 // ── RENDERING ─────────────────────────────────────────────────────────────────
 
-function renderPoints() {
-  pointsG.innerHTML = state.components.map(c => {
-    const def = COMP_DEFS[c.type];
-    const pts = Object.entries(def.terminals).map(([key, t]) => {
-      const ringFill = FIXING_HEX[t.kind];
-      return `<g data-point="${c.id}|${key}" class="point">
-        <circle cx="${t.x}" cy="${t.y}" r="12" fill="transparent"></circle>
-        <circle cx="${t.x}" cy="${t.y}" r="5" fill="${ringFill}" stroke="#222" stroke-width="1.5"></circle>
-        <text x="${t.x + t.ldx}" y="${t.y + t.ldy}" text-anchor="${t.la}" font-size="7.2" fill="#222" style="pointer-events:none;">${t.text}</text>
-      </g>`;
-    }).join('');
-    return `<g transform="translate(${c.x},${c.y})">${pts}</g>`;
-  }).join('');
+function lockIconSvg(compId, locked) {
+  const fill = locked ? '#22a06b' : '#c9a06a';
+  const stroke = locked ? '#145a35' : '#7a4a20';
+  return `<g data-lock="${compId}" style="cursor:pointer;">
+    <circle cx="12" cy="12" r="11" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>
+    <rect x="7" y="11" width="10" height="8" rx="1.5" fill="#fff" stroke="${stroke}" stroke-width="1"/>
+    <path d="M 9 11 L 9 8 A 3 3 0 0 1 15 8 L 15 11" fill="none" stroke="#fff" stroke-width="2"/>
+    ${locked ? '' : '<circle cx="12" cy="15" r="1.6" fill="' + stroke + '"/>'}
+  </g>`;
 }
 
-function renderComponents() {
+function resizeHandleSvg(comp, def) {
+  if (!def.stretchAxis || comp.locked) return '';
+  if (def.stretchAxis === 'w') {
+    return `<g data-resize="${comp.id}" style="cursor:ew-resize;">
+      <rect x="${comp.w - 14}" y="${comp.h/2 - 8}" width="14" height="16" rx="3" fill="#e0a72e" stroke="#8a6410" stroke-width="1.2"/>
+      <line x1="${comp.w - 10}" y1="${comp.h/2 - 4}" x2="${comp.w - 10}" y2="${comp.h/2 + 4}" stroke="#5a3f00" stroke-width="1.2"/>
+      <line x1="${comp.w - 6}" y1="${comp.h/2 - 4}" x2="${comp.w - 6}" y2="${comp.h/2 + 4}" stroke="#5a3f00" stroke-width="1.2"/>
+    </g>`;
+  }
+  return `<g data-resize="${comp.id}" style="cursor:ns-resize;">
+    <rect x="${comp.w/2 - 8}" y="${comp.h - 14}" width="16" height="14" rx="3" fill="#e0a72e" stroke="#8a6410" stroke-width="1.2"/>
+    <line x1="${comp.w/2 - 4}" y1="${comp.h - 10}" x2="${comp.w/2 + 4}" y2="${comp.h - 10}" stroke="#5a3f00" stroke-width="1.2"/>
+    <line x1="${comp.w/2 - 4}" y1="${comp.h - 6}" x2="${comp.w/2 + 4}" y2="${comp.h - 6}" stroke="#5a3f00" stroke-width="1.2"/>
+  </g>`;
+}
+
+function pointDotsSvg(c, def) {
+  const pts = def.terminals(c);
+  return Object.values(pts).map(t =>
+    `<circle cx="${t.x}" cy="${t.y}" r="3.5" fill="#4a4a4a" stroke="#fff" stroke-width="1" style="pointer-events:none;"/>`
+  ).join('');
+}
+
+function renderComponents(analysis) {
   componentsG.innerHTML = state.components.map(c => {
     const def = COMP_DEFS[c.type];
     const sel = selection && selection.type === 'component' && selection.id === c.id;
-    return `<g class="comp-group" data-comp="${c.id}" transform="translate(${c.x},${c.y})">
-      ${sel ? `<rect x="-5" y="-5" width="${def.w + 10}" height="${def.h + 10}" rx="10" fill="none" stroke="#ffb020" stroke-width="3" stroke-dasharray="6 4"></rect>` : ''}
+    const isTrue = c.type === 'groundDatum' ? true : (c.locked && isCompTrue(analysis, c.id));
+    const trueRing = c.locked ? `<rect x="-3" y="-3" width="${c.w + 6}" height="${c.h + 6}" rx="8" fill="none" stroke="${isTrue ? '#22a06b' : '#c0392b'}" stroke-width="2" stroke-dasharray="${isTrue ? 'none' : '5 4'}" opacity="0.75"/>` : '';
+    return `<g class="comp-group ${c.locked ? 'locked' : 'unlocked'}" data-comp="${c.id}" transform="translate(${c.x},${c.y})">
+      ${sel ? `<rect x="-6" y="-6" width="${c.w + 12}" height="${c.h + 12}" rx="10" fill="none" stroke="#ffb020" stroke-width="3" stroke-dasharray="6 4"></rect>` : ''}
+      ${trueRing}
       ${def.body(c)}
+      ${pointDotsSvg(c, def)}
+      ${c.type !== 'groundDatum' ? lockIconSvg(c.id, c.locked) : ''}
+      ${resizeHandleSvg(c, def)}
     </g>`;
   }).join('');
 }
 
-function fixingFullPoints(f) {
-  return [termPos(f.from.compId, f.from.key), ...f.points, termPos(f.to.compId, f.to.key)];
-}
-
-function pathFromPoints(pts) {
-  return 'M ' + pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L ');
-}
-
-function renderFixings(analysis) {
-  fixingsG.innerHTML = state.fixings.map(f => {
-    const pts = fixingFullPoints(f);
-    const d = pathFromPoints(pts);
-    const isSel = selection && selection.type === 'fixing' && selection.id === f.id;
-    const info = analysis.fixingInfo.get(f.id);
-    const isFault = info && (info.fromBad || info.toBad);
-    const selRing = isSel ? `<path d="${d}" fill="none" stroke="#ffb020" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>` : '';
-    const hit = `<path d="${d}" fill="none" stroke="transparent" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`;
-    const base = `<path d="${d}" fill="none" stroke="${FIXING_HEX[f.type]}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
-    const faultOverlay = isFault ? `<path d="${d}" fill="none" stroke="#c0392b" stroke-width="3" stroke-dasharray="4 5" stroke-linecap="round" stroke-linejoin="round"/>` : '';
-    const midpoint = pts[Math.floor(pts.length / 2)];
-    const warnIcon = isFault ? `<text x="${midpoint.x}" y="${midpoint.y - 8}" text-anchor="middle" font-size="13" style="pointer-events:none;">⚠️</text>` : '';
-    return `<g data-fixing="${f.id}">${selRing}${hit}${base}${faultOverlay}${warnIcon}</g>`;
-  }).join('');
-}
-
-function renderPreview() {
-  if (!drawing) { previewG.innerHTML = ''; return; }
-  const startPos = termPos(drawing.from.compId, drawing.from.key);
-  const tail = lastPointerPt ? [lastPointerPt] : [];
-  const pts = [startPos, ...drawing.points, ...tail];
-  const d = pathFromPoints(pts);
-  const c = FIXING_HEX[drawing.type];
-  const dots = drawing.points.map(p => `<circle cx="${p.x}" cy="${p.y}" r="4" fill="${c}" stroke="#fff" stroke-width="1"/>`).join('');
-  const ring = `<circle cx="${startPos.x}" cy="${startPos.y}" r="10" fill="none" stroke="${c}" stroke-width="2" stroke-dasharray="3 2"/>`;
-  previewG.innerHTML = `<path d="${d}" fill="none" stroke="${c}" stroke-width="3" stroke-dasharray="6 5" opacity="0.85"/>${dots}${ring}`;
+function renderSnapPreview() {
+  if (!liveSnapPreview) { snapPreviewG.innerHTML = ''; return; }
+  const p = liveSnapPreview;
+  snapPreviewG.innerHTML = `<circle cx="${p.x}" cy="${p.y}" r="11" fill="none" stroke="#ffb020" stroke-width="3" stroke-dasharray="3 3"><animate attributeName="r" values="9;13;9" dur="0.8s" repeatCount="indefinite"/></circle>`;
 }
 
 function levelBodySvg(l, isTrue, hasTarget) {
@@ -949,59 +849,48 @@ function syncLevelButtons() {
   document.getElementById('removeLevelBtn').style.display = hasLevel ? 'block' : 'none';
 }
 
-function renderStructureStatus(analysis) {
-  const el = document.getElementById('structureStatus');
-  if (!analysis.faults.length) {
-    el.textContent = state.fixings.length ? `${state.fixings.length} fixing${state.fixings.length === 1 ? '' : 's'} — no faults.` : 'No fixings yet.';
-    return;
-  }
-  el.innerHTML = `<b>${analysis.faults.length} fault${analysis.faults.length === 1 ? '' : 's'}:</b><br>` +
-    analysis.faults.map(f => escapeHtml(f.message)).join('<br>');
+function renderAssemblyStatus(analysis) {
+  const el = document.getElementById('assemblyStatus');
+  const total = state.components.length;
+  if (!total) { el.textContent = 'No components yet.'; return; }
+  const locked = state.components.filter(c => c.locked || c.type === 'groundDatum').length;
+  const trueCount = state.components.filter(c => c.type === 'groundDatum' || (c.locked && isCompTrue(analysis, c.id))).length;
+  el.textContent = `${total} component${total === 1 ? '' : 's'} · ${locked} locked · ${trueCount} reading true`;
 }
 
 function updateStatusStrip() {
   const el = document.getElementById('statusStrip');
-  if (drawing) {
-    const comp = findComp(drawing.from.compId);
-    const label = comp ? `${COMP_DEFS[comp.type].label} (${drawing.from.key})` : 'a point';
-    el.textContent = `Fixing ${FIXING_NAME[drawing.type]} from ${label}. Drag and release on open board to drop a point, or release on a connection point to finish. Esc / right-click to cancel.`;
-  } else if (selectedFixing) {
-    el.textContent = `${FIXING_NAME[selectedFixing]} armed — press and drag from a connection point to start a fixing.`;
-  } else {
-    el.textContent = 'Drag components onto the board, then pick a fixing type to start fixing them together.';
-  }
+  if (draggingComp) el.textContent = 'Drop it near a matching connection point to snap it, then tap the padlock to lock it.';
+  else el.textContent = 'Drag components onto the board. Drag one so a connection point lines up with another, then tap its lock icon to fix it there.';
 }
 
 function render() {
   const analysis = analyzeStructure();
-  renderComponents();
-  renderFixings(analysis);
-  renderPoints();
-  renderPreview();
+  renderComponents(analysis);
+  renderSnapPreview();
   renderLevel(analysis);
   syncLevelButtons();
-  renderStructureStatus(analysis);
+  renderAssemblyStatus(analysis);
   updateStatusStrip();
-  document.getElementById('undoPointBtn').disabled = !(drawing && drawing.points.length);
-  document.getElementById('cancelFixingBtn').disabled = !drawing;
   document.getElementById('undoBoardBtn').disabled = !undoStack.length;
   document.getElementById('redoBoardBtn').disabled = !redoStack.length;
   scheduleAutosave();
 }
 
-// ── COMPONENT PLACEMENT / DRAGGING ───────────────────────────────────────────
+// ── COMPONENT PLACEMENT ──────────────────────────────────────────────────────
 
 function placeComponent(type, x, y) {
+  const def = COMP_DEFS[type];
   const id = 'c' + (nextId++);
-  const comp = { id, type, x, y };
+  const comp = { id, type, x, y, w: def.baseW, h: def.baseH, locked: false };
   state.components.push(comp);
   return comp;
 }
 
 function addComponent(type, x, y) {
   const def = COMP_DEFS[type];
-  const cx = clamp(x - def.w / 2, MARGIN, BOARD_W - def.w - MARGIN);
-  const cy = clamp(y - def.h / 2, MARGIN, BOARD_H - def.h - MARGIN);
+  const cx = clamp(x - def.baseW / 2, MARGIN, BOARD_W - def.baseW - MARGIN);
+  const cy = clamp(y - def.baseH / 2, MARGIN, BOARD_H - def.baseH - MARGIN);
   snapshotForUndo();
   const comp = placeComponent(type, cx, cy);
   selection = { type: 'component', id: comp.id };
@@ -1009,50 +898,34 @@ function addComponent(type, x, y) {
   flashStatus(`Added ${def.label}.`);
 }
 
-// ── FIXING DRAWING ────────────────────────────────────────────────────────────
+// ── LOCK / UNLOCK ─────────────────────────────────────────────────────────────
 
-function startFixing(compId, key, type) {
-  drawing = { type, from: { compId, key }, points: [] };
-  lastPointerPt = null;
-  selection = null;
-  render();
-}
-
-function addFixingPoint(pt) {
-  if (!drawing) return;
-  drawing.points.push(snap(pt));
-  render();
-}
-
-function finishFixingAt(compId, key) {
-  if (!drawing) return;
-  if (compId === drawing.from.compId && key === drawing.from.key && drawing.points.length === 0) {
-    drawing = null; render(); return;
+function toggleLock(compId) {
+  const comp = findComp(compId);
+  if (!comp || comp.type === 'groundDatum') return;
+  if (comp.locked) {
+    snapshotForUndo();
+    comp.locked = false;
+    render();
+    flashStatus('Unlocked — drag or resize it, then lock it again once it lines up.');
+    return;
   }
+  const best = findBestSnap(comp, LOCK_EPSILON);
+  if (!best) { flashStatus('Not lined up with anything yet — drag it so a connection point snaps first.'); return; }
   snapshotForUndo();
-  const fixing = { id: 'f' + (nextId++), type: drawing.type, from: drawing.from, to: { compId, key }, points: drawing.points };
-  state.fixings.push(fixing);
-  drawing = null;
+  comp.locked = true;
   render();
-  flashStatus(`Fixing added (${FIXING_NAME[fixing.type]}).`);
+  flashStatus('Locked in place.');
 }
-
-function cancelFixing() { if (drawing) { drawing = null; render(); } }
-function undoFixingPoint() { if (drawing && drawing.points.length) { drawing.points.pop(); render(); } }
 
 // ── SELECTION / DELETE ────────────────────────────────────────────────────────
 
 function deleteSelection() {
   if (!selection) { flashStatus('Nothing selected.'); return; }
   snapshotForUndo();
-  if (selection.type === 'fixing') {
-    state.fixings = state.fixings.filter(f => f.id !== selection.id);
-  } else {
-    const deadId = selection.id;
-    if (state.level && state.level.attachedCompId === deadId) state.level.attachedCompId = null;
-    state.fixings = state.fixings.filter(f => f.from.compId !== deadId && f.to.compId !== deadId);
-    state.components = state.components.filter(c => c.id !== deadId);
-  }
+  const deadId = selection.id;
+  if (state.level && state.level.attachedCompId === deadId) state.level.attachedCompId = null;
+  state.components = state.components.filter(c => c.id !== deadId);
   selection = null;
   render();
 }
@@ -1072,26 +945,16 @@ boardSvg.addEventListener('pointerdown', e => {
     }
   }
 
-  const pointEl = e.target.closest('[data-point]');
+  const lockEl = e.target.closest('[data-lock]');
+  if (lockEl) { toggleLock(lockEl.getAttribute('data-lock')); e.preventDefault(); return; }
 
-  if (drawing) {
-    e.preventDefault();
-    return;
-  }
-
-  if (pointEl) {
-    if (selectedFixing) {
-      const [compId, key] = pointEl.getAttribute('data-point').split('|');
-      startFixing(compId, key, selectedFixing);
-    }
-    e.preventDefault();
-    return;
-  }
-
-  const fixingEl = e.target.closest('[data-fixing]');
-  if (fixingEl) {
-    selection = { type: 'fixing', id: fixingEl.getAttribute('data-fixing') };
+  const resizeEl = e.target.closest('[data-resize]');
+  if (resizeEl) {
+    const id = resizeEl.getAttribute('data-resize');
+    selection = { type: 'component', id };
+    draggingResize = { id, startSnapshot: JSON.stringify(state) };
     render();
+    e.preventDefault();
     return;
   }
 
@@ -1100,7 +963,9 @@ boardSvg.addEventListener('pointerdown', e => {
     const id = compEl.getAttribute('data-comp');
     const comp = findComp(id);
     selection = { type: 'component', id };
-    draggingComp = { id, offX: pt.x - comp.x, offY: pt.y - comp.y, startSnapshot: JSON.stringify(state) };
+    if (!comp.locked) {
+      draggingComp = { id, offX: pt.x - comp.x, offY: pt.y - comp.y, startSnapshot: JSON.stringify(state) };
+    }
     render();
     return;
   }
@@ -1111,6 +976,7 @@ boardSvg.addEventListener('pointerdown', e => {
 
 window.addEventListener('pointermove', e => {
   if (!e.isPrimary) return;
+
   if (draggingLevel) {
     const pt = getBoardPoint(e);
     const l = state.level;
@@ -1119,63 +985,94 @@ window.addEventListener('pointermove', e => {
     render();
     return;
   }
-  if (drawing) {
-    lastPointerPt = getBoardPoint(e);
-    renderPreview();
-  } else if (draggingComp) {
+
+  if (draggingResize) {
+    const pt = getBoardPoint(e);
+    const comp = findComp(draggingResize.id);
+    if (!comp) { draggingResize = null; return; }
+    const def = COMP_DEFS[comp.type];
+    if (def.stretchAxis === 'w') {
+      comp.w = clamp(snap(pt.x - comp.x), def.minLen, def.maxLen);
+    } else if (def.stretchAxis === 'h') {
+      comp.h = clamp(snap(pt.y - comp.y), def.minLen, def.maxLen);
+    }
+    const analysis = analyzeStructure();
+    renderComponents(analysis);
+    renderLevel(analysis);
+    return;
+  }
+
+  if (draggingComp) {
     const pt = getBoardPoint(e);
     const comp = findComp(draggingComp.id);
     if (!comp) { draggingComp = null; return; }
     const def = COMP_DEFS[comp.type];
-    const s = snap({ x: pt.x - draggingComp.offX, y: pt.y - draggingComp.offY });
-    comp.x = clamp(s.x, MARGIN, BOARD_W - def.w - MARGIN);
-    comp.y = clamp(s.y, MARGIN, BOARD_H - def.h - MARGIN);
+    const s = { x: snap(pt.x - draggingComp.offX), y: snap(pt.y - draggingComp.offY) };
+    comp.x = clamp(s.x, MARGIN, BOARD_W - comp.w - MARGIN);
+    comp.y = clamp(s.y, MARGIN, BOARD_H - comp.h - MARGIN);
+    const best = findBestSnap(comp, SNAP_DIST);
+    liveSnapPreview = best ? best.oAbs : null;
     const analysis = analyzeStructure();
-    renderComponents();
-    renderFixings(analysis);
-    renderPoints();
+    renderComponents(analysis);
+    renderSnapPreview();
     renderLevel(analysis);
   }
 });
 
 window.addEventListener('pointerup', e => {
   if (!e.isPrimary) return;
+
   if (draggingLevel) {
     draggingLevel = null;
     const l = state.level;
-    const nearest = findNearestComponent({ x: l.x + LEVEL_W / 2, y: l.y + LEVEL_H / 2 }, 90);
-    l.attachedCompId = nearest;
+    let best = null, bestDist = 90;
+    state.components.forEach(c => {
+      const def = COMP_DEFS[c.type];
+      const cx = c.x + c.w / 2, cy = c.y + c.h / 2;
+      const d = Math.hypot((l.x + LEVEL_W / 2) - cx, (l.y + LEVEL_H / 2) - cy) - Math.max(c.w, c.h) / 2;
+      if (d <= bestDist) { bestDist = d; best = c.id; }
+    });
+    l.attachedCompId = best;
     render();
     return;
   }
+
+  if (draggingResize) {
+    const comp = findComp(draggingResize.id);
+    if (comp && draggingResize.startSnapshot !== JSON.stringify(state)) {
+      undoStack.push(draggingResize.startSnapshot);
+      if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+      redoStack = [];
+    }
+    draggingResize = null;
+    render();
+    return;
+  }
+
   if (draggingComp) {
-    if (draggingComp.startSnapshot !== JSON.stringify(state)) {
+    const comp = findComp(draggingComp.id);
+    if (comp) {
+      const best = findBestSnap(comp, SNAP_DIST);
+      if (best) {
+        comp.x += best.oAbs.x - best.myAbs.x;
+        comp.y += best.oAbs.y - best.myAbs.y;
+      }
+    }
+    liveSnapPreview = null;
+    if (comp && draggingComp.startSnapshot !== JSON.stringify(state)) {
       undoStack.push(draggingComp.startSnapshot);
       if (undoStack.length > UNDO_LIMIT) undoStack.shift();
       redoStack = [];
-      document.getElementById('undoBoardBtn').disabled = false;
-      document.getElementById('redoBoardBtn').disabled = true;
     }
     draggingComp = null;
-  }
-  if (!drawing) return;
-  const under = document.elementFromPoint(e.clientX, e.clientY);
-  const pointEl = under && under.closest && under.closest('[data-point]');
-  if (pointEl) {
-    const [compId, key] = pointEl.getAttribute('data-point').split('|');
-    finishFixingAt(compId, key);
-  } else {
-    addFixingPoint(getBoardPoint(e));
+    render();
   }
 });
-
-boardSvg.addEventListener('contextmenu', e => { e.preventDefault(); if (drawing) cancelFixing(); });
 
 window.addEventListener('keydown', e => {
   const tag = document.activeElement && document.activeElement.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
   if (e.key === 'Escape' && !document.getElementById('curriculumOverlay').hidden) { closeCurriculum(); e.preventDefault(); }
-  else if (e.key === 'Escape' && drawing) { cancelFixing(); e.preventDefault(); }
   else if (e.key === 'Delete' || e.key === 'Backspace') { deleteSelection(); e.preventDefault(); }
   else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') { performUndo(); e.preventDefault(); }
   else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) { performRedo(); e.preventDefault(); }
@@ -1223,44 +1120,22 @@ function buildPalette() {
   });
 }
 
-// ── FIXING TYPE BUTTONS / BOARD TOOL BUTTONS ─────────────────────────────────
+// ── BOARD TOOL BUTTONS ────────────────────────────────────────────────────────
 
-function renderFixingButtons() {
-  const row = document.getElementById('fixingRow');
-  row.innerHTML = ['CARCASS', 'HANGER', 'FINISH'].map(k =>
-    `<button type="button" class="fixing-btn${selectedFixing === k ? ' active' : ''}" data-fixing="${k}">${k}</button>`
-  ).join('');
-}
-renderFixingButtons();
-
-document.getElementById('fixingRow').addEventListener('click', e => {
-  const btn = e.target.closest('[data-fixing]');
-  if (!btn) return;
-  const k = btn.getAttribute('data-fixing');
-  selectedFixing = (selectedFixing === k) ? null : k;
-  renderFixingButtons();
-  document.getElementById('armedStatus').textContent = selectedFixing ? `Armed: ${FIXING_NAME[selectedFixing]}` : 'No fixing type selected.';
-  updateStatusStrip();
-});
-
-document.getElementById('undoPointBtn').addEventListener('click', undoFixingPoint);
-document.getElementById('cancelFixingBtn').addEventListener('click', cancelFixing);
 document.getElementById('deleteSelBtn').addEventListener('click', deleteSelection);
 
-document.getElementById('clearFixingsBtn').addEventListener('click', () => {
-  if (!state.fixings.length) { flashStatus('No fixings to clear.'); return; }
-  if (!confirm('Remove all fixings from the board? Components stay in place.')) return;
+document.getElementById('unlockAllBtn').addEventListener('click', () => {
+  if (!state.components.some(c => c.locked)) { flashStatus('Nothing is locked.'); return; }
   snapshotForUndo();
-  state.fixings = [];
-  selection = null;
+  state.components.forEach(c => { c.locked = false; });
   render();
 });
 
 document.getElementById('newBoardBtn').addEventListener('click', () => {
   if (state.components.length && !confirm('Clear the board? Unsaved changes will be lost.')) return;
   snapshotForUndo();
-  state = { components: [], fixings: [], level: null };
-  selection = null; drawing = null;
+  state = { components: [], level: null };
+  selection = null;
   document.getElementById('lessonName').value = '';
   try { localStorage.removeItem(AUTOSAVE_KEY); } catch (e) { /* ignore */ }
   render();
@@ -1301,31 +1176,37 @@ document.getElementById('zoomLabel').addEventListener('click', () => { zoomPct =
 
 // ── AUTOSAVE ──────────────────────────────────────────────────────────────────
 
-const AUTOSAVE_KEY = 'ctt_autosave_v1';
+const AUTOSAVE_KEY = 'ctt2_autosave_v1';
 let autosaveTimer = null;
 
 function scheduleAutosave() {
   clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(() => {
     try {
-      if (state.components.length || state.fixings.length) {
-        localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(state));
-      } else {
-        localStorage.removeItem(AUTOSAVE_KEY);
-      }
+      if (state.components.length) localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(state));
+      else localStorage.removeItem(AUTOSAVE_KEY);
     } catch (e) { /* private browsing etc. */ }
   }, 600);
+}
+
+function normalizeState() {
+  if (!('level' in state)) state.level = null;
+  state.components.forEach(c => {
+    const def = COMP_DEFS[c.type];
+    if (typeof c.w !== 'number') c.w = def.baseW;
+    if (typeof c.h !== 'number') c.h = def.baseH;
+    if (typeof c.locked !== 'boolean') c.locked = false;
+  });
 }
 
 function checkAutosaveRestore() {
   let saved;
   try { saved = JSON.parse(localStorage.getItem(AUTOSAVE_KEY) || 'null'); } catch (e) { saved = null; }
-  if (!saved || !((saved.components || []).length || (saved.fixings || []).length)) return;
-  const n = (saved.components || []).length, f = (saved.fixings || []).length;
-  const nWord = n === 1 ? 'component' : 'components', fWord = f === 1 ? 'fixing' : 'fixings';
-  if (confirm(`Restore your last unsaved board? (${n} ${nWord}, ${f} ${fWord})\n\nCancel to start with a blank board instead.`)) {
+  if (!saved || !(saved.components || []).length) return;
+  const n = saved.components.length;
+  if (confirm(`Restore your last unsaved board? (${n} component${n === 1 ? '' : 's'})\n\nCancel to start with a blank board instead.`)) {
     state = saved;
-    if (!('level' in state)) state.level = null;
+    normalizeState();
     nextId = computeNextId(state);
     render();
     flashStatus('Restored your last session.');
@@ -1350,8 +1231,8 @@ function performUndo() {
   if (!undoStack.length) return;
   redoStack.push(JSON.stringify(state));
   state = JSON.parse(undoStack.pop());
-  if (!('level' in state)) state.level = null;
-  selection = null; drawing = null;
+  normalizeState();
+  selection = null;
   render();
 }
 
@@ -1359,8 +1240,8 @@ function performRedo() {
   if (!redoStack.length) return;
   undoStack.push(JSON.stringify(state));
   state = JSON.parse(redoStack.pop());
-  if (!('level' in state)) state.level = null;
-  selection = null; drawing = null;
+  normalizeState();
+  selection = null;
   render();
 }
 
@@ -1369,7 +1250,7 @@ document.getElementById('redoBoardBtn').addEventListener('click', performRedo);
 
 // ── LESSON SAVE / LOAD (localStorage) ────────────────────────────────────────
 
-const LS_KEY = 'ctt_lessons_v1';
+const LS_KEY = 'ctt2_lessons_v1';
 
 function loadLessons() { try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch { return {}; } }
 function persistLessons(l) { localStorage.setItem(LS_KEY, JSON.stringify(l)); }
@@ -1403,9 +1284,9 @@ document.getElementById('loadLessonBtn').addEventListener('click', () => {
   if (!confirm(`Load "${name}"? This replaces the current board.`)) return;
   snapshotForUndo();
   state = JSON.parse(JSON.stringify(lessons[name]));
-  if (!('level' in state)) state.level = null;
+  normalizeState();
   nextId = computeNextId(state);
-  selection = null; drawing = null;
+  selection = null;
   document.getElementById('lessonName').value = name;
   render();
   flashStatus(`Loaded lesson "${name}".`);
@@ -1442,12 +1323,12 @@ document.getElementById('importJsonFile').addEventListener('change', e => {
   reader.onload = () => {
     try {
       const data = JSON.parse(reader.result);
-      if (!data.components || !data.fixings) throw new Error('Not a valid diagram file.');
+      if (!data.components) throw new Error('Not a valid diagram file.');
       snapshotForUndo();
       state = data;
-      if (!('level' in state)) state.level = null;
+      normalizeState();
       nextId = computeNextId(state);
-      selection = null; drawing = null;
+      selection = null;
       render();
       flashStatus('Diagram imported.');
     } catch (err) {
@@ -1459,7 +1340,6 @@ document.getElementById('importJsonFile').addEventListener('change', e => {
 });
 
 document.getElementById('exportPngBtn').addEventListener('click', () => {
-  if (drawing) { alert('Finish or cancel the current fixing before exporting.'); return; }
   const savedSel = selection;
   selection = null;
   render();
@@ -1500,7 +1380,7 @@ function closeCurriculum() { document.getElementById('curriculumOverlay').hidden
 document.getElementById('openCurriculumBtn').addEventListener('click', openCurriculum);
 document.getElementById('closeCurriculumBtn').addEventListener('click', closeCurriculum);
 document.getElementById('curriculumOverlay').addEventListener('click', e => { if (e.target.id === 'curriculumOverlay') closeCurriculum(); });
-document.getElementById('includeFixingToggle').addEventListener('change', renderCurriculum);
+document.getElementById('includeAssembleToggle').addEventListener('change', renderCurriculum);
 
 function renderCurriculum() {
   const tabsEl = document.getElementById('curriculumTabs');
@@ -1534,59 +1414,44 @@ function renderCurriculum() {
 
 const STARTER_GAP = 60;
 
-function elbowPoints(p1, p2, staggerIndex) {
-  if (p1.y === p2.y || p1.x === p2.x) return [];
-  const stagger = ((staggerIndex || 0) - 1) * 14;
-  let midX = Math.round((p1.x + p2.x) / 2 / GRID) * GRID + stagger;
-  const lo = Math.min(p1.x, p2.x) + 10, hi = Math.max(p1.x, p2.x) - 10;
-  if (lo <= hi) midX = clamp(midX, lo, hi);
-  return [{ x: midX, y: p1.y }, { x: midX, y: p2.y }];
-}
-
 function loadStarterLayout(item) {
-  if (!item || !item.starter || !item.starter.length) return;
+  if (!item || !item.build || !item.build.length) return;
   if (state.components.length && !confirm(`Replace the current board with a starter layout for "${item.name}"? Unsaved changes will be lost.`)) return;
   snapshotForUndo();
-  state = { components: [], fixings: [], level: null };
-  selection = null; drawing = null;
+  state = { components: [], level: null };
+  selection = null;
+  const includeAssemble = document.getElementById('includeAssembleToggle').checked;
   let x = MARGIN + 10;
   const rowY = 380;
-  const placed = [];
-  item.starter.forEach(type => {
-    const def = COMP_DEFS[type];
-    if (!def) return;
-    const y = clamp(rowY, MARGIN, BOARD_H - def.h - MARGIN);
-    const px = clamp(x, MARGIN, BOARD_W - def.w - MARGIN);
-    const comp = placeComponent(type, px, y);
-    placed.push(comp);
-    x += def.w + STARTER_GAP;
-  });
+  const byAlias = {};
 
-  const includeFixing = document.getElementById('includeFixingToggle').checked;
-  if (includeFixing && item.wiring && item.wiring.length && item.keys) {
-    const idOf = key => placed[item.keys[key]] && placed[item.keys[key]].id;
-    const pairCounts = {};
-    item.wiring.forEach(w => {
-      const fromId = idOf(w.from[0]), toId = idOf(w.to[0]);
-      if (!fromId || !toId) return;
-      const pairKey = [fromId, toId].sort().join('|');
-      const idx = pairCounts[pairKey] || 0;
-      pairCounts[pairKey] = idx + 1;
-      const p1 = termPos(fromId, w.from[1]), p2 = termPos(toId, w.to[1]);
-      state.fixings.push({
-        id: 'f' + (nextId++), type: w.type,
-        from: { compId: fromId, key: w.from[1] }, to: { compId: toId, key: w.to[1] },
-        points: elbowPoints(p1, p2, idx),
-      });
-    });
-  }
+  item.build.forEach(step => {
+    const def = COMP_DEFS[step.type];
+    const y = clamp(rowY, MARGIN, BOARD_H - def.baseH - MARGIN);
+    const px = clamp(x, MARGIN, BOARD_W - def.baseW - MARGIN);
+    const comp = placeComponent(step.type, px, y);
+    byAlias[step.alias] = comp;
+    x += def.baseW + STARTER_GAP;
+
+    if (includeAssemble && step.snapTo) {
+      const target = byAlias[step.snapTo[0]];
+      if (!target) return;
+      const myT = compTerminals(comp)[step.snapOwn];
+      const tT = compTerminals(target)[step.snapTo[1]];
+      const myAbs = { x: comp.x + myT.x, y: comp.y + myT.y };
+      const tAbs = { x: target.x + tT.x, y: target.y + tT.y };
+      comp.x += tAbs.x - myAbs.x;
+      comp.y += tAbs.y - myAbs.y;
+      comp.locked = true;
+    }
+  });
 
   document.getElementById('lessonName').value = item.name;
   closeCurriculum();
   render();
-  flashStatus(includeFixing && item.wiring
-    ? `Loaded a fully-fixed reference for "${item.name}". Add the level to check it.`
-    : `Loaded starter kit: ${item.name}. Fix it up, then check it with the level.`);
+  flashStatus(includeAssemble
+    ? `Loaded a partly assembled reference for "${item.name}". Finish snapping and locking the rest, then check it with the level.`
+    : `Loaded starter kit: ${item.name}. Snap it together and lock each piece, then check it with the level.`);
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
