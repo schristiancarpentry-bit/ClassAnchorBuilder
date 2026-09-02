@@ -160,7 +160,8 @@
 
     <div class="panel">
       <h3>Lock / Unlock</h3>
-      <p class="hint">Once a component is snapped onto a connection point, tap the padlock on it to lock it there — locked pieces can't be dragged or resized. Tap the padlock again to unlock and reposition. Only locked pieces count toward the level/plumb check below.</p>
+      <p class="hint">Every connection point is its own padlock — drag a component so one end lines up with another component's point, then tap that point to lock it there. Tap it again to unlock. A component with any locked end can't be dragged, but a stretchable one can still often be resized to reach its <em>other</em> end — lock one end, then drag the resize handle to stretch it onto the next connection.</p>
+      <p class="hint">Only locked points count toward the level/plumb check below — locking both ends of a piece is what makes it "properly fixed."</p>
     </div>
 
     <div class="panel">
@@ -263,11 +264,15 @@ function pointsCompatible(kindA, kindB) {
 // size, so a stretched plate's stud positions redistribute automatically.
 // body(c) draws using c.w/c.h too.
 
+// stretchAxis: null | 'w' | 'h' | 'wh'. Bounds are always named minW/maxW
+// and/or minH/maxH regardless of which axes are actually stretchable, so
+// the resize code never has to guess which field name applies.
+
 const COMP_DEFS = {
 
   groundDatum: {
     label: 'Ground / Floor Datum (verified true)', badge: 'GND',
-    baseW: 280, baseH: 60, stretchAxis: null,
+    baseW: 280, baseH: 60, stretchAxis: 'w', minW: 200, maxW: 600,
     body: (c) => `
       <rect x="0" y="0" width="${c.w}" height="${c.h}" rx="6" fill="#d8d2c4" stroke="#333" stroke-width="1.5"/>
       <line x1="8" y1="${c.h-8}" x2="20" y2="${c.h-20}" stroke="#999" stroke-width="1.2"/>
@@ -286,7 +291,7 @@ const COMP_DEFS = {
 
   solePlate: {
     label: 'Sole Plate', badge: 'SP',
-    baseW: 300, baseH: 70, stretchAxis: 'w', minLen: 140, maxLen: 600,
+    baseW: 300, baseH: 70, stretchAxis: 'w', minW: 140, maxW: 600,
     body: (c) => `
       <rect x="0" y="20" width="${c.w}" height="26" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
       <text x="${c.w/2}" y="37" text-anchor="middle" font-size="8.5" font-weight="800" fill="#3a2410">SOLE PLATE</text>`,
@@ -301,7 +306,7 @@ const COMP_DEFS = {
 
   headPlate: {
     label: 'Head Plate', badge: 'HP',
-    baseW: 300, baseH: 70, stretchAxis: 'w', minLen: 140, maxLen: 600,
+    baseW: 300, baseH: 70, stretchAxis: 'w', minW: 140, maxW: 600,
     body: (c) => `
       <rect x="0" y="20" width="${c.w}" height="26" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
       <text x="${c.w/2}" y="37" text-anchor="middle" font-size="8.5" font-weight="800" fill="#3a2410">HEAD PLATE</text>`,
@@ -316,7 +321,7 @@ const COMP_DEFS = {
 
   stud: {
     label: 'Stud', badge: 'STD',
-    baseW: 40, baseH: 140, stretchAxis: 'h', minLen: 60, maxLen: 300,
+    baseW: 40, baseH: 140, stretchAxis: 'h', minH: 60, maxH: 300,
     body: (c) => `
       <rect x="8" y="6" width="24" height="${c.h - 12}" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
       <text x="20" y="${c.h/2}" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410" transform="rotate(-90 20 ${c.h/2})">STUD</text>`,
@@ -328,7 +333,7 @@ const COMP_DEFS = {
 
   noggin: {
     label: 'Noggin', badge: 'NOG',
-    baseW: 90, baseH: 34, stretchAxis: 'w', minLen: 40, maxLen: 180,
+    baseW: 90, baseH: 34, stretchAxis: 'w', minW: 40, maxW: 180,
     body: (c) => `
       <rect x="6" y="8" width="${c.w - 12}" height="18" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
       <text x="${c.w/2}" y="21" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410">NOGGIN</text>`,
@@ -340,7 +345,7 @@ const COMP_DEFS = {
 
   floorJoist: {
     label: 'Joist (floor / ceiling)', badge: 'JST',
-    baseW: 280, baseH: 54, stretchAxis: 'w', minLen: 120, maxLen: 500,
+    baseW: 280, baseH: 54, stretchAxis: 'w', minW: 120, maxW: 500,
     body: (c) => `
       <rect x="0" y="14" width="${c.w}" height="26" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
       <text x="${c.w/2}" y="30" text-anchor="middle" font-size="8.5" font-weight="800" fill="#3a2410">JOIST</text>`,
@@ -353,10 +358,12 @@ const COMP_DEFS = {
 
   joistHanger: {
     label: 'Joist Hanger', badge: 'HGR',
-    baseW: 70, baseH: 54, stretchAxis: null,
+    baseW: 70, baseH: 54, stretchAxis: 'h', minH: 40, maxH: 100,
+    // Height stretch is cosmetic (a deeper bracket for a deeper joist) — the
+    // wall-fix/seat points stay put so it never fights a lock.
     body: (c) => `
-      <path d="M 8 40 L 8 14 L 20 14 L 20 30 L 50 30 L 50 14 L 62 14 L 62 40 Z" fill="#9aa3ac" stroke="#3a3f45" stroke-width="1.5"/>
-      <text x="35" y="50" text-anchor="middle" font-size="6.5" font-weight="800" fill="#333">HANGER</text>`,
+      <path d="M 8 ${c.h - 14} L 8 14 L 20 14 L 20 ${c.h - 24} L 50 ${c.h - 24} L 50 14 L 62 14 L 62 ${c.h - 14} Z" fill="#9aa3ac" stroke="#3a3f45" stroke-width="1.5"/>
+      <text x="35" y="${c.h - 4}" text-anchor="middle" font-size="6.5" font-weight="800" fill="#333">HANGER</text>`,
     terminals: () => ({
       wallFix:   { x: 6,  y: 27, kind: 'HANGER', text: 'WALL', la: 'start', ldx: 9,  ldy: 3 },
       joistSeat: { x: 64, y: 27, kind: 'FRAME',  text: 'SEAT', la: 'end',   ldx: -9, ldy: 3 },
@@ -365,7 +372,7 @@ const COMP_DEFS = {
 
   wallPlate: {
     label: 'Wall Plate', badge: 'WP',
-    baseW: 300, baseH: 80, stretchAxis: 'w', minLen: 140, maxLen: 600,
+    baseW: 300, baseH: 80, stretchAxis: 'w', minW: 140, maxW: 600,
     body: (c) => `
       <rect x="0" y="24" width="${c.w}" height="26" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
       <text x="${c.w/2}" y="41" text-anchor="middle" font-size="8.5" font-weight="800" fill="#3a2410">WALL PLATE</text>`,
@@ -383,7 +390,7 @@ const COMP_DEFS = {
 
   rafter: {
     label: 'Rafter', badge: 'RFT',
-    baseW: 40, baseH: 130, stretchAxis: 'h', minLen: 60, maxLen: 280,
+    baseW: 40, baseH: 130, stretchAxis: 'h', minH: 60, maxH: 280,
     body: (c) => `
       <path d="M 8 ${c.h - 6} L 32 ${c.h - 6} L 32 6 L 8 6 Z" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
       <text x="20" y="${c.h/2}" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410" transform="rotate(-90 20 ${c.h/2})">RAFTER</text>`,
@@ -394,8 +401,11 @@ const COMP_DEFS = {
   },
 
   ridgeBoard: {
+    // Flat top-down block — a real ridge board's the same story as the
+    // rafters meeting it: on a 2D schematic it's just a long timber, so it's
+    // drawn exactly like the other plates rather than any fancier roof shape.
     label: 'Ridge Board', badge: 'RB',
-    baseW: 300, baseH: 60, stretchAxis: 'w', minLen: 140, maxLen: 600,
+    baseW: 300, baseH: 60, stretchAxis: 'w', minW: 140, maxW: 600,
     body: (c) => `
       <rect x="0" y="17" width="${c.w}" height="26" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
       <text x="${c.w/2}" y="34" text-anchor="middle" font-size="8.5" font-weight="800" fill="#3a2410">RIDGE BOARD</text>`,
@@ -410,42 +420,42 @@ const COMP_DEFS = {
 
   doorLining: {
     label: 'Door Lining (frame)', badge: 'DL',
-    baseW: 140, baseH: 160, stretchAxis: null,
-    body: () => `
-      <rect x="0" y="0" width="16" height="160" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.2"/>
-      <rect x="124" y="0" width="16" height="160" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.2"/>
-      <rect x="0" y="0" width="140" height="16" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.2"/>
-      <text x="70" y="94" text-anchor="middle" font-size="7.5" font-weight="800" fill="#3a2410" transform="rotate(-90 70 94)">DOOR LINING</text>`,
-    terminals: () => ({
-      jambL1: { x: 6,   y: 40,  kind: 'FRAME', text: 'JL1', la: 'start', ldx: 9,  ldy: 3 },
-      jambL2: { x: 6,   y: 120, kind: 'FRAME', text: 'JL2', la: 'start', ldx: 9,  ldy: 3 },
-      jambR1: { x: 134, y: 40,  kind: 'FRAME', text: 'JR1', la: 'end',   ldx: -9, ldy: 3 },
-      jambR2: { x: 134, y: 120, kind: 'FRAME', text: 'JR2', la: 'end',   ldx: -9, ldy: 3 },
-      head:   { x: 70,  y: 6,   kind: 'FRAME', text: 'HEAD', la: 'middle', ldx: 0, ldy: -9 },
-      hingeUpper: { x: 6,   y: 65, kind: 'TRIM', text: 'HNG', la: 'start', ldx: 9,  ldy: 3 },
-      hingeLower: { x: 6,   y: 95, kind: 'TRIM', text: 'HNG', la: 'start', ldx: 9,  ldy: 3 },
-      trimR:      { x: 134, y: 80, kind: 'TRIM', text: 'TRM', la: 'end',   ldx: -9, ldy: 3 },
+    baseW: 140, baseH: 160, stretchAxis: 'wh', minW: 100, maxW: 220, minH: 120, maxH: 260,
+    body: (c) => `
+      <rect x="0" y="0" width="16" height="${c.h}" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.2"/>
+      <rect x="${c.w-16}" y="0" width="16" height="${c.h}" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.2"/>
+      <rect x="0" y="0" width="${c.w}" height="16" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.2"/>
+      <text x="${c.w/2}" y="${c.h/2}" text-anchor="middle" font-size="7.5" font-weight="800" fill="#3a2410" transform="rotate(-90 ${c.w/2} ${c.h/2})">DOOR LINING</text>`,
+    terminals: (c) => ({
+      jambL1: { x: 6,       y: c.h * 0.25, kind: 'FRAME', text: 'JL1', la: 'start', ldx: 9,  ldy: 3 },
+      jambL2: { x: 6,       y: c.h * 0.75, kind: 'FRAME', text: 'JL2', la: 'start', ldx: 9,  ldy: 3 },
+      jambR1: { x: c.w - 6, y: c.h * 0.25, kind: 'FRAME', text: 'JR1', la: 'end',   ldx: -9, ldy: 3 },
+      jambR2: { x: c.w - 6, y: c.h * 0.75, kind: 'FRAME', text: 'JR2', la: 'end',   ldx: -9, ldy: 3 },
+      head:   { x: c.w / 2, y: 6,          kind: 'FRAME', text: 'HEAD', la: 'middle', ldx: 0, ldy: -9 },
+      hingeUpper: { x: 6,       y: c.h * 0.4,  kind: 'TRIM', text: 'HNG', la: 'start', ldx: 9,  ldy: 3 },
+      hingeLower: { x: 6,       y: c.h * 0.6,  kind: 'TRIM', text: 'HNG', la: 'start', ldx: 9,  ldy: 3 },
+      trimR:      { x: c.w - 6, y: c.h * 0.5,  kind: 'TRIM', text: 'TRM', la: 'end',   ldx: -9, ldy: 3 },
     }),
   },
 
   doorLeaf: {
     label: 'Door Leaf', badge: 'DR',
-    baseW: 90, baseH: 170, stretchAxis: null,
-    body: () => `
-      <rect x="6" y="6" width="78" height="158" fill="#dcc9a0" stroke="#7a4a20" stroke-width="1.5"/>
-      <rect x="16" y="16" width="58" height="60" fill="none" stroke="#a87b45" stroke-width="1"/>
-      <rect x="16" y="86" width="58" height="60" fill="none" stroke="#a87b45" stroke-width="1"/>
-      <circle cx="74" cy="85" r="2.6" fill="#7a4a20"/>
-      <text x="45" y="167" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410">DOOR LEAF</text>`,
-    terminals: () => ({
-      hingeTop:    { x: 6, y: 30,  kind: 'TRIM', text: 'HNG', la: 'start', ldx: 9, ldy: 3 },
-      hingeBottom: { x: 6, y: 140, kind: 'TRIM', text: 'HNG', la: 'start', ldx: 9, ldy: 3 },
+    baseW: 90, baseH: 170, stretchAxis: 'wh', minW: 60, maxW: 110, minH: 120, maxH: 260,
+    body: (c) => `
+      <rect x="6" y="6" width="${c.w-12}" height="${c.h-12}" fill="#dcc9a0" stroke="#7a4a20" stroke-width="1.5"/>
+      <rect x="16" y="${c.h*0.09}" width="${c.w-32}" height="${c.h*0.35}" fill="none" stroke="#a87b45" stroke-width="1"/>
+      <rect x="16" y="${c.h*0.51}" width="${c.w-32}" height="${c.h*0.35}" fill="none" stroke="#a87b45" stroke-width="1"/>
+      <circle cx="${c.w-16}" cy="${c.h*0.5}" r="2.6" fill="#7a4a20"/>
+      <text x="${c.w/2}" y="${c.h-3}" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410">DOOR LEAF</text>`,
+    terminals: (c) => ({
+      hingeTop:    { x: 6, y: c.h * 0.18, kind: 'TRIM', text: 'HNG', la: 'start', ldx: 9, ldy: 3 },
+      hingeBottom: { x: 6, y: c.h * 0.82, kind: 'TRIM', text: 'HNG', la: 'start', ldx: 9, ldy: 3 },
     }),
   },
 
   skirting: {
     label: 'Skirting', badge: 'SKT',
-    baseW: 200, baseH: 30, stretchAxis: 'w', minLen: 80, maxLen: 400,
+    baseW: 200, baseH: 30, stretchAxis: 'w', minW: 80, maxW: 400,
     body: (c) => `
       <rect x="6" y="10" width="${c.w - 12}" height="10" fill="#e6d3a8" stroke="#7a4a20" stroke-width="1.2"/>
       <text x="${c.w/2}" y="27" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410">SKIRTING</text>`,
@@ -457,7 +467,7 @@ const COMP_DEFS = {
 
   architrave: {
     label: 'Architrave', badge: 'ARC',
-    baseW: 140, baseH: 30, stretchAxis: 'w', minLen: 60, maxLen: 300,
+    baseW: 140, baseH: 30, stretchAxis: 'w', minW: 60, maxW: 300,
     body: (c) => `
       <rect x="6" y="10" width="${c.w - 12}" height="8" fill="#e6d3a8" stroke="#7a4a20" stroke-width="1.2"/>
       <text x="${c.w/2}" y="27" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410">ARCHITRAVE</text>`,
@@ -469,7 +479,7 @@ const COMP_DEFS = {
 
   stairStringer: {
     label: 'Stair Stringer', badge: 'STR',
-    baseW: 320, baseH: 60, stretchAxis: 'w', minLen: 160, maxLen: 600,
+    baseW: 320, baseH: 60, stretchAxis: 'w', minW: 160, maxW: 600,
     body: (c) => `
       <rect x="0" y="20" width="${c.w}" height="26" fill="#c9a06a" stroke="#7a4a20" stroke-width="1.5"/>
       <text x="${c.w/2}" y="37" text-anchor="middle" font-size="8.5" font-weight="800" fill="#3a2410">STAIR STRINGER</text>`,
@@ -487,13 +497,13 @@ const COMP_DEFS = {
 
   stairTread: {
     label: 'Stair Tread', badge: 'TRD',
-    baseW: 120, baseH: 30, stretchAxis: null,
-    body: () => `
-      <rect x="6" y="10" width="108" height="10" fill="#dcc9a0" stroke="#7a4a20" stroke-width="1.2"/>
-      <text x="60" y="27" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410">TREAD</text>`,
-    terminals: () => ({
-      leftEnd:  { x: 6,   y: 15, kind: 'FRAME', text: 'L', la: 'start', ldx: 9,  ldy: 3 },
-      rightEnd: { x: 114, y: 15, kind: 'FRAME', text: 'R', la: 'end',   ldx: -9, ldy: 3 },
+    baseW: 120, baseH: 30, stretchAxis: 'w', minW: 60, maxW: 200,
+    body: (c) => `
+      <rect x="6" y="10" width="${c.w - 12}" height="10" fill="#dcc9a0" stroke="#7a4a20" stroke-width="1.2"/>
+      <text x="${c.w/2}" y="27" text-anchor="middle" font-size="7" font-weight="800" fill="#3a2410">TREAD</text>`,
+    terminals: (c) => ({
+      leftEnd:  { x: 6,      y: 15, kind: 'FRAME', text: 'L', la: 'start', ldx: 9,  ldy: 3 },
+      rightEnd: { x: c.w - 6, y: 15, kind: 'FRAME', text: 'R', la: 'end',   ldx: -9, ldy: 3 },
     }),
   },
 };
@@ -692,13 +702,67 @@ function computeNextId(s) {
 
 function flashStatus(msg) { document.getElementById('actionStatus').textContent = msg; }
 
+function isPointLocked(comp, key) { return comp.type === 'groundDatum' || !!(comp.lockedPoints && comp.lockedPoints[key]); }
+function isCompLocked(comp) { return comp.type !== 'groundDatum' && !!(comp.lockedPoints && Object.values(comp.lockedPoints).some(Boolean)); }
+
+// Does this point's LOCAL position actually change when the component is
+// stretched along `axis`? Detected by perturbing w/h and comparing, rather
+// than hand-classifying every point on every component type — works for any
+// shape, including the multi-point rows (a plate's stud positions all move;
+// its datum-in point, at a fixed offset, doesn't).
+function pointDependsOnAxis(def, comp, key, axis) {
+  const t1 = def.terminals(comp)[key];
+  const probe = Object.assign({}, comp, { [axis]: comp[axis] + 20 });
+  const t2 = def.terminals(probe)[key];
+  return Math.abs(t1.x - t2.x) > 0.01 || Math.abs(t1.y - t2.y) > 0.01;
+}
+
+// Resizing is safe as long as at most one axis-dependent point is locked —
+// with one, a pure translation (see applyResize) can always keep it exactly
+// where it is while the rest of the shape stretches around it. Two locked
+// points on the same axis would be over-constrained, so block resize then.
+function canResizeAxis(comp, axis) {
+  const def = COMP_DEFS[comp.type];
+  const lockedKeys = Object.keys(comp.lockedPoints || {}).filter(k => comp.lockedPoints[k]);
+  const dependent = lockedKeys.filter(k => pointDependsOnAxis(def, comp, k, axis));
+  return dependent.length <= 1;
+}
+
+// Change comp.w or comp.h to rawValue, then — if exactly one locked point on
+// that axis would otherwise have moved — translate the whole component so
+// that point lands back exactly where it was. This is what lets you lock one
+// end of a stretchable member and then drag its resize handle to reach the
+// other: the locked end simply never moves, no matter which end the handle
+// visually sits at.
+function applyResize(comp, axis, rawValue) {
+  const def = COMP_DEFS[comp.type];
+  const lockedKeys = Object.keys(comp.lockedPoints || {}).filter(k => comp.lockedPoints[k] && pointDependsOnAxis(def, comp, k, axis));
+  let preserve = null;
+  if (lockedKeys.length) {
+    const t = def.terminals(comp)[lockedKeys[0]];
+    preserve = { key: lockedKeys[0], abs: { x: comp.x + t.x, y: comp.y + t.y } };
+  }
+  comp[axis] = rawValue;
+  if (preserve) {
+    const t2 = def.terminals(comp)[preserve.key];
+    const abs2 = { x: comp.x + t2.x, y: comp.y + t2.y };
+    comp.x += preserve.abs.x - abs2.x;
+    comp.y += preserve.abs.y - abs2.y;
+  }
+  comp.x = clamp(comp.x, MARGIN, BOARD_W - comp.w - MARGIN);
+  comp.y = clamp(comp.y, MARGIN, BOARD_H - comp.h - MARGIN);
+}
+
 // Find the closest compatible point on ANY other component to one of this
-// component's own points, at its CURRENT position — used both for the
-// snap-on-release and for deciding whether Lock is currently allowed.
+// component's own points, at its CURRENT position — used for snap-on-release
+// (both plain dragging and after a resize) and for deciding whether a given
+// point is currently eligible to be locked. A point that's already locked is
+// never a candidate — it's already fixed, nothing to snap.
 function findBestSnap(comp, maxDist) {
   const myPoints = compTerminals(comp);
   let best = null, bestDist = maxDist;
   Object.entries(myPoints).forEach(([myKey, myT]) => {
+    if (isPointLocked(comp, myKey)) return;
     const myAbs = { x: comp.x + myT.x, y: comp.y + myT.y };
     state.components.forEach(other => {
       if (other.id === comp.id) return;
@@ -715,8 +779,8 @@ function findBestSnap(comp, maxDist) {
 }
 
 // ── STRUCTURE ANALYSIS ───────────────────────────────────────────────────────
-// Only LOCKED components (plus the always-true Ground/Floor Datum) take part.
-// Two points are joined if they're locked-in-place and exactly coincide —
+// Only LOCKED points (plus the always-true Ground/Floor Datum's points) take
+// part. Two points are joined if they're both locked and exactly coincide —
 // which can only happen because the snap mechanic put them there, so kinds
 // are already guaranteed compatible by construction.
 
@@ -728,9 +792,9 @@ function analyzeStructure() {
 
   const nodes = []; // {compId, key, x, y}
   state.components.forEach(c => {
-    if (c.type !== 'groundDatum' && !c.locked) return;
     const pts = compTerminals(c);
     Object.entries(pts).forEach(([key, t]) => {
+      if (!isPointLocked(c, key)) return;
       const nkey = nk(c.id, key);
       parent.set(nkey, nkey);
       nodes.push({ compId: c.id, key, x: c.x + t.x, y: c.y + t.y });
@@ -754,62 +818,81 @@ function analyzeStructure() {
   return { find, nk, trueSet };
 }
 
+// True once the component has at least one locked point, and every locked
+// point it has traces back to a Ground/Floor Datum — so a stud that's only
+// had its bottom locked so far reads true on that basis alone; if the sole
+// plate under it turns out not to be true, it correctly reads false instead.
 function isCompTrue(analysis, compId) {
   const comp = findComp(compId);
-  if (!comp || (!comp.locked && comp.type !== 'groundDatum')) return false;
-  const firstKey = Object.keys(compTerminals(comp))[0];
-  return analysis.trueSet.has(analysis.find(analysis.nk(compId, firstKey)));
+  if (!comp) return false;
+  if (comp.type === 'groundDatum') return true;
+  const lockedKeys = Object.keys(comp.lockedPoints || {}).filter(k => comp.lockedPoints[k]);
+  if (!lockedKeys.length) return false;
+  return lockedKeys.every(k => analysis.trueSet.has(analysis.find(analysis.nk(compId, k))));
 }
 
 // ── RENDERING ─────────────────────────────────────────────────────────────────
 
-function lockIconSvg(compId, locked) {
-  const fill = locked ? '#22a06b' : '#c9a06a';
-  const stroke = locked ? '#145a35' : '#7a4a20';
-  return `<g data-lock="${compId}" style="cursor:pointer;">
-    <circle cx="12" cy="12" r="11" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>
-    <rect x="7" y="11" width="10" height="8" rx="1.5" fill="#fff" stroke="${stroke}" stroke-width="1"/>
-    <path d="M 9 11 L 9 8 A 3 3 0 0 1 15 8 L 15 11" fill="none" stroke="#fff" stroke-width="2"/>
-    ${locked ? '' : '<circle cx="12" cy="15" r="1.6" fill="' + stroke + '"/>'}
-  </g>`;
-}
-
-function resizeHandleSvg(comp, def) {
-  if (!def.stretchAxis || comp.locked) return '';
-  if (def.stretchAxis === 'w') {
-    return `<g data-resize="${comp.id}" style="cursor:ew-resize;">
-      <rect x="${comp.w - 14}" y="${comp.h/2 - 8}" width="14" height="16" rx="3" fill="#e0a72e" stroke="#8a6410" stroke-width="1.2"/>
-      <line x1="${comp.w - 10}" y1="${comp.h/2 - 4}" x2="${comp.w - 10}" y2="${comp.h/2 + 4}" stroke="#5a3f00" stroke-width="1.2"/>
-      <line x1="${comp.w - 6}" y1="${comp.h/2 - 4}" x2="${comp.w - 6}" y2="${comp.h/2 + 4}" stroke="#5a3f00" stroke-width="1.2"/>
-    </g>`;
-  }
-  return `<g data-resize="${comp.id}" style="cursor:ns-resize;">
-    <rect x="${comp.w/2 - 8}" y="${comp.h - 14}" width="16" height="14" rx="3" fill="#e0a72e" stroke="#8a6410" stroke-width="1.2"/>
-    <line x1="${comp.w/2 - 4}" y1="${comp.h - 10}" x2="${comp.w/2 + 4}" y2="${comp.h - 10}" stroke="#5a3f00" stroke-width="1.2"/>
-    <line x1="${comp.w/2 - 4}" y1="${comp.h - 6}" x2="${comp.w/2 + 4}" y2="${comp.h - 6}" stroke="#5a3f00" stroke-width="1.2"/>
-  </g>`;
-}
-
-function pointDotsSvg(c, def) {
+// Each connection point IS its own lock control — a small circle you tap:
+// grey/amber outline while unlocked, solid green with a check once locked.
+// The Ground/Floor Datum's points render as plain fixed dots since the
+// datum itself is always true and never needs locking.
+function pointsSvg(c, def) {
   const pts = def.terminals(c);
-  return Object.values(pts).map(t =>
-    `<circle cx="${t.x}" cy="${t.y}" r="3.5" fill="#4a4a4a" stroke="#fff" stroke-width="1" style="pointer-events:none;"/>`
-  ).join('');
+  const isDatum = c.type === 'groundDatum';
+  return Object.entries(pts).map(([key, t]) => {
+    const locked = isPointLocked(c, key);
+    const fill = isDatum ? '#4a4a4a' : (locked ? '#22a06b' : '#c9a06a');
+    const stroke = isDatum ? '#222' : (locked ? '#145a35' : '#7a4a20');
+    const check = locked ? `<path d="M ${t.x - 2.6} ${t.y - 0.3} L ${t.x - 0.6} ${t.y + 2.1} L ${t.x + 2.8} ${t.y - 2.3}" stroke="#fff" stroke-width="1.3" fill="none" style="pointer-events:none;"/>` : '';
+    return `<g data-lockpoint="${c.id}|${key}" style="cursor:${isDatum ? 'default' : 'pointer'};">
+      <circle cx="${t.x}" cy="${t.y}" r="10" fill="transparent"/>
+      <circle cx="${t.x}" cy="${t.y}" r="6" fill="${fill}" stroke="${stroke}" stroke-width="1.4"/>
+      ${check}
+    </g>`;
+  }).join('');
+}
+
+// One handle per stretchable axis, always shown (dimmed + inert when that
+// axis currently can't be resized — see canResizeAxis) rather than
+// disappearing, so it's clear stretching is still possible in principle even
+// while one end is locked.
+function resizeHandlesSvg(comp, def) {
+  if (!def.stretchAxis) return '';
+  const axes = def.stretchAxis === 'wh' ? ['w', 'h'] : [def.stretchAxis];
+  return axes.map(axis => {
+    const enabled = canResizeAxis(comp, axis);
+    const fill = enabled ? '#e0a72e' : '#cbbfa0';
+    const stroke = enabled ? '#8a6410' : '#98917a';
+    const cursor = enabled ? (axis === 'w' ? 'ew-resize' : 'ns-resize') : 'not-allowed';
+    if (axis === 'w') {
+      return `<g data-resize="${comp.id}" data-axis="w" style="cursor:${cursor};">
+        <rect x="${comp.w - 14}" y="${comp.h/2 - 8}" width="14" height="16" rx="3" fill="${fill}" stroke="${stroke}" stroke-width="1.2"/>
+        <line x1="${comp.w - 10}" y1="${comp.h/2 - 4}" x2="${comp.w - 10}" y2="${comp.h/2 + 4}" stroke="#5a3f00" stroke-width="1.1"/>
+        <line x1="${comp.w - 6}" y1="${comp.h/2 - 4}" x2="${comp.w - 6}" y2="${comp.h/2 + 4}" stroke="#5a3f00" stroke-width="1.1"/>
+      </g>`;
+    }
+    return `<g data-resize="${comp.id}" data-axis="h" style="cursor:${cursor};">
+      <rect x="${comp.w/2 - 8}" y="${comp.h - 14}" width="16" height="14" rx="3" fill="${fill}" stroke="${stroke}" stroke-width="1.2"/>
+      <line x1="${comp.w/2 - 4}" y1="${comp.h - 10}" x2="${comp.w/2 + 4}" y2="${comp.h - 10}" stroke="#5a3f00" stroke-width="1.1"/>
+      <line x1="${comp.w/2 - 4}" y1="${comp.h - 6}" x2="${comp.w/2 + 4}" y2="${comp.h - 6}" stroke="#5a3f00" stroke-width="1.1"/>
+    </g>`;
+  }).join('');
 }
 
 function renderComponents(analysis) {
   componentsG.innerHTML = state.components.map(c => {
     const def = COMP_DEFS[c.type];
     const sel = selection && selection.type === 'component' && selection.id === c.id;
-    const isTrue = c.type === 'groundDatum' ? true : (c.locked && isCompTrue(analysis, c.id));
-    const trueRing = c.locked ? `<rect x="-3" y="-3" width="${c.w + 6}" height="${c.h + 6}" rx="8" fill="none" stroke="${isTrue ? '#22a06b' : '#c0392b'}" stroke-width="2" stroke-dasharray="${isTrue ? 'none' : '5 4'}" opacity="0.75"/>` : '';
-    return `<g class="comp-group ${c.locked ? 'locked' : 'unlocked'}" data-comp="${c.id}" transform="translate(${c.x},${c.y})">
+    const locked = isCompLocked(c);
+    const isTrue = c.type === 'groundDatum' ? true : (locked && isCompTrue(analysis, c.id));
+    const trueRing = locked ? `<rect x="-3" y="-3" width="${c.w + 6}" height="${c.h + 6}" rx="8" fill="none" stroke="${isTrue ? '#22a06b' : '#c0392b'}" stroke-width="2" stroke-dasharray="${isTrue ? 'none' : '5 4'}" opacity="0.75"/>` : '';
+    return `<g class="comp-group ${locked ? 'locked' : 'unlocked'}" data-comp="${c.id}" transform="translate(${c.x},${c.y})">
       ${sel ? `<rect x="-6" y="-6" width="${c.w + 12}" height="${c.h + 12}" rx="10" fill="none" stroke="#ffb020" stroke-width="3" stroke-dasharray="6 4"></rect>` : ''}
       ${trueRing}
       ${def.body(c)}
-      ${pointDotsSvg(c, def)}
-      ${c.type !== 'groundDatum' ? lockIconSvg(c.id, c.locked) : ''}
-      ${resizeHandleSvg(c, def)}
+      ${resizeHandlesSvg(c, def)}
+      ${pointsSvg(c, def)}
     </g>`;
   }).join('');
 }
@@ -853,9 +936,9 @@ function renderAssemblyStatus(analysis) {
   const el = document.getElementById('assemblyStatus');
   const total = state.components.length;
   if (!total) { el.textContent = 'No components yet.'; return; }
-  const locked = state.components.filter(c => c.locked || c.type === 'groundDatum').length;
-  const trueCount = state.components.filter(c => c.type === 'groundDatum' || (c.locked && isCompTrue(analysis, c.id))).length;
-  el.textContent = `${total} component${total === 1 ? '' : 's'} · ${locked} locked · ${trueCount} reading true`;
+  const locked = state.components.filter(c => isCompLocked(c) || c.type === 'groundDatum').length;
+  const trueCount = state.components.filter(c => c.type === 'groundDatum' || (isCompLocked(c) && isCompTrue(analysis, c.id))).length;
+  el.textContent = `${total} component${total === 1 ? '' : 's'} · ${locked} with a locked end · ${trueCount} reading true`;
 }
 
 function updateStatusStrip() {
@@ -882,7 +965,7 @@ function render() {
 function placeComponent(type, x, y) {
   const def = COMP_DEFS[type];
   const id = 'c' + (nextId++);
-  const comp = { id, type, x, y, w: def.baseW, h: def.baseH, locked: false };
+  const comp = { id, type, x, y, w: def.baseW, h: def.baseH, lockedPoints: {} };
   state.components.push(comp);
   return comp;
 }
@@ -899,23 +982,36 @@ function addComponent(type, x, y) {
 }
 
 // ── LOCK / UNLOCK ─────────────────────────────────────────────────────────────
+// Each connection point locks independently. Unlocking is always allowed;
+// locking requires that point to currently sit exactly on a compatible point
+// belonging to some other component (drag it there first).
 
-function toggleLock(compId) {
+function togglePointLock(compId, key) {
   const comp = findComp(compId);
   if (!comp || comp.type === 'groundDatum') return;
-  if (comp.locked) {
+  if (!comp.lockedPoints) comp.lockedPoints = {};
+  if (comp.lockedPoints[key]) {
     snapshotForUndo();
-    comp.locked = false;
+    delete comp.lockedPoints[key];
     render();
-    flashStatus('Unlocked — drag or resize it, then lock it again once it lines up.');
+    flashStatus('Unlocked that end.');
     return;
   }
-  const best = findBestSnap(comp, LOCK_EPSILON);
-  if (!best) { flashStatus('Not lined up with anything yet — drag it so a connection point snaps first.'); return; }
+  const myT = compTerminals(comp)[key];
+  const myAbs = { x: comp.x + myT.x, y: comp.y + myT.y };
+  const touching = state.components.some(other => {
+    if (other.id === comp.id) return false;
+    return Object.entries(compTerminals(other)).some(([oKey, oT]) => {
+      if (!pointsCompatible(myT.kind, oT.kind)) return false;
+      const oAbs = { x: other.x + oT.x, y: other.y + oT.y };
+      return Math.hypot(myAbs.x - oAbs.x, myAbs.y - oAbs.y) <= LOCK_EPSILON;
+    });
+  });
+  if (!touching) { flashStatus('Drag this end onto a matching connection point first, then lock it.'); return; }
   snapshotForUndo();
-  comp.locked = true;
+  comp.lockedPoints[key] = true;
   render();
-  flashStatus('Locked in place.');
+  flashStatus('Locked that end.');
 }
 
 // ── SELECTION / DELETE ────────────────────────────────────────────────────────
@@ -945,15 +1041,26 @@ boardSvg.addEventListener('pointerdown', e => {
     }
   }
 
-  const lockEl = e.target.closest('[data-lock]');
-  if (lockEl) { toggleLock(lockEl.getAttribute('data-lock')); e.preventDefault(); return; }
+  const lockPtEl = e.target.closest('[data-lockpoint]');
+  if (lockPtEl) {
+    const [compId, key] = lockPtEl.getAttribute('data-lockpoint').split('|');
+    togglePointLock(compId, key);
+    e.preventDefault();
+    return;
+  }
 
   const resizeEl = e.target.closest('[data-resize]');
   if (resizeEl) {
     const id = resizeEl.getAttribute('data-resize');
-    selection = { type: 'component', id };
-    draggingResize = { id, startSnapshot: JSON.stringify(state) };
-    render();
+    const axis = resizeEl.getAttribute('data-axis');
+    const comp = findComp(id);
+    if (comp && canResizeAxis(comp, axis)) {
+      selection = { type: 'component', id };
+      draggingResize = { id, axis, startSnapshot: JSON.stringify(state) };
+      render();
+    } else {
+      flashStatus('That end is locked — unlock it first, or stretch from the other end.');
+    }
     e.preventDefault();
     return;
   }
@@ -963,7 +1070,7 @@ boardSvg.addEventListener('pointerdown', e => {
     const id = compEl.getAttribute('data-comp');
     const comp = findComp(id);
     selection = { type: 'component', id };
-    if (!comp.locked) {
+    if (!isCompLocked(comp)) {
       draggingComp = { id, offX: pt.x - comp.x, offY: pt.y - comp.y, startSnapshot: JSON.stringify(state) };
     }
     render();
@@ -991,11 +1098,10 @@ window.addEventListener('pointermove', e => {
     const comp = findComp(draggingResize.id);
     if (!comp) { draggingResize = null; return; }
     const def = COMP_DEFS[comp.type];
-    if (def.stretchAxis === 'w') {
-      comp.w = clamp(snap(pt.x - comp.x), def.minLen, def.maxLen);
-    } else if (def.stretchAxis === 'h') {
-      comp.h = clamp(snap(pt.y - comp.y), def.minLen, def.maxLen);
-    }
+    const axis = draggingResize.axis;
+    const lo = axis === 'w' ? def.minW : def.minH, hi = axis === 'w' ? def.maxW : def.maxH;
+    const raw = axis === 'w' ? pt.x - comp.x : pt.y - comp.y;
+    applyResize(comp, axis, clamp(snap(raw), lo, hi));
     const analysis = analyzeStructure();
     renderComponents(analysis);
     renderLevel(analysis);
@@ -1006,7 +1112,6 @@ window.addEventListener('pointermove', e => {
     const pt = getBoardPoint(e);
     const comp = findComp(draggingComp.id);
     if (!comp) { draggingComp = null; return; }
-    const def = COMP_DEFS[comp.type];
     const s = { x: snap(pt.x - draggingComp.offX), y: snap(pt.y - draggingComp.offY) };
     comp.x = clamp(s.x, MARGIN, BOARD_W - comp.w - MARGIN);
     comp.y = clamp(s.y, MARGIN, BOARD_H - comp.h - MARGIN);
@@ -1039,6 +1144,15 @@ window.addEventListener('pointerup', e => {
 
   if (draggingResize) {
     const comp = findComp(draggingResize.id);
+    if (comp) {
+      // Same snap-on-release as a plain drag, so the newly-stretched end
+      // can land exactly on a nearby connection point too.
+      const best = findBestSnap(comp, SNAP_DIST);
+      if (best) {
+        comp.x += best.oAbs.x - best.myAbs.x;
+        comp.y += best.oAbs.y - best.myAbs.y;
+      }
+    }
     if (comp && draggingResize.startSnapshot !== JSON.stringify(state)) {
       undoStack.push(draggingResize.startSnapshot);
       if (undoStack.length > UNDO_LIMIT) undoStack.shift();
@@ -1125,9 +1239,9 @@ function buildPalette() {
 document.getElementById('deleteSelBtn').addEventListener('click', deleteSelection);
 
 document.getElementById('unlockAllBtn').addEventListener('click', () => {
-  if (!state.components.some(c => c.locked)) { flashStatus('Nothing is locked.'); return; }
+  if (!state.components.some(isCompLocked)) { flashStatus('Nothing is locked.'); return; }
   snapshotForUndo();
-  state.components.forEach(c => { c.locked = false; });
+  state.components.forEach(c => { c.lockedPoints = {}; });
   render();
 });
 
@@ -1195,7 +1309,13 @@ function normalizeState() {
     const def = COMP_DEFS[c.type];
     if (typeof c.w !== 'number') c.w = def.baseW;
     if (typeof c.h !== 'number') c.h = def.baseH;
-    if (typeof c.locked !== 'boolean') c.locked = false;
+    if (!c.lockedPoints) {
+      // Migrate a board saved by the older whole-component lock: treat every
+      // point as locked, matching what "locked" used to mean.
+      c.lockedPoints = {};
+      if (c.locked) Object.keys(def.terminals(c)).forEach(k => { c.lockedPoints[k] = true; });
+    }
+    delete c.locked;
   });
 }
 
@@ -1442,7 +1562,11 @@ function loadStarterLayout(item) {
       const tAbs = { x: target.x + tT.x, y: target.y + tT.y };
       comp.x += tAbs.x - myAbs.x;
       comp.y += tAbs.y - myAbs.y;
-      comp.locked = true;
+      // Both ends of the connection need to be locked for it to register —
+      // this component's own point, and the point it landed on.
+      comp.lockedPoints[step.snapOwn] = true;
+      if (!target.lockedPoints) target.lockedPoints = {};
+      target.lockedPoints[step.snapTo[1]] = true;
     }
   });
 
