@@ -332,6 +332,14 @@
     </div>
 
     <div class="panel">
+      <h3>Voltmeter</h3>
+      <button type="button" class="btn btn-primary" id="addMeterBtn">Add voltmeter to board</button>
+      <button type="button" class="btn btn-danger" id="removeMeterBtn" style="display:none;">Remove voltmeter</button>
+      <p class="hint">Drag the meter body to place it, then drag the red and black probe tips onto any terminal to test the voltage there — just like a real meter, it reads the difference between the two probe points. Tap the dial to switch the meter itself on/off.</p>
+      <p class="hint">Needs the Consumer Unit's power switch ON too — same as the sparks/lit-up test above, the meter only reads what's actually energised.</p>
+    </div>
+
+    <div class="panel">
       <h3>Board Tools</h3>
       <label style="display:flex;align-items:center;gap:6px;font-size:0.78rem;font-weight:600;">
         <input type="checkbox" id="snapToggle" checked style="width:auto;margin:0;" /> Snap to grid
@@ -400,6 +408,7 @@
         <g id="wiresLayer"></g>
         <g id="terminalsLayer"></g>
         <g id="previewLayer"></g>
+        <g id="meterLayer"></g>
       </svg>
     </div>
   </div>
@@ -1288,7 +1297,7 @@ const CURRICULUM = {
           { from: ['ms', 'L'], to: ['cu', 'mainsL'], color: 'L' }, { from: ['ms', 'N'], to: ['cu', 'mainsN'], color: 'N' }, { from: ['ms', 'E'], to: ['cu', 'mainsE'], color: 'E' },
           { from: ['cu', 'lightsL'], to: ['sw', 'COM'], color: 'L' }, { from: ['sw', 'L1'], to: ['lamp', 'L'], color: 'L' }, { from: ['cu', 'n1'], to: ['lamp', 'N'], color: 'N' },
         ] },
-      { name: 'Basic continuity/conductor testing exercise', type: 'testing', components: ['multimeter/continuity tester', 'test leads'], notes: 'Foundation testing skill, not the full BS 7671 sequence.', buildable: false, boardNote: 'No meter is simulated here, but the Circuit Test power switch checks the same underlying idea — right conductor to right terminal, all the way through.' },
+      { name: 'Basic continuity/conductor testing exercise', type: 'testing', components: ['multimeter/continuity tester', 'test leads'], notes: 'Foundation testing skill, not the full BS 7671 sequence.', buildable: false, boardNote: 'The board has its own Voltmeter tool (sidebar) for exactly this — drag its two probes onto any terminals to read the voltage between them, right conductor to right terminal, all the way through.' },
     ]
   },
   level_2: {
@@ -1471,20 +1480,25 @@ const CURRICULUM = {
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
-let state = { components: [], wires: [] };
+let state = { components: [], wires: [], meter: null };
 let nextId = 1;
 let selection = null;            // {type:'component'|'wire', id}
 let selectedColor = null;        // 'L' | 'N' | 'E' | null
 let drawing = null;              // {color, from:{compId,key}, points:[{x,y}]}
 let lastPointerPt = null;
 let draggingComp = null;         // {id, offX, offY}
+let draggingProbe = null;        // 'A' | 'B'
+let draggingMeterBody = null;    // {offX, offY}
 let snapEnabled = true;
+
+const METER_W = 100, METER_H = 178;
 
 const boardSvg = document.getElementById('boardSvg');
 const componentsG = document.getElementById('componentsLayer');
 const wiresG = document.getElementById('wiresLayer');
 const terminalsG = document.getElementById('terminalsLayer');
 const previewG = document.getElementById('previewLayer');
+const meterG = document.getElementById('meterLayer');
 const boardScroll = document.getElementById('boardScroll');
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
@@ -1508,6 +1522,23 @@ function litUp(analysis, compId, k1, k2) {
 // (e.g. a switch's L_IN) rather than a two-terminal load.
 function termLive(analysis, compId, key) {
   return !!(analysis && analysis.energized.has(compId + '|' + key));
+}
+
+// Voltmeter support: a live terminal's "potential" is just its own declared
+// kind (L/N/E) — since analyzeCircuit() only ever links two same-kind
+// terminals together (a wire only joins the graph when its colour matches
+// BOTH ends, and every internal bond in INTERNAL_LINKS stays within one
+// conductor's own network), any energized terminal is safely on that kind's
+// network. A dead (unreachable) terminal has no potential to read.
+function potentialAtTerminal(analysis, compId, key) {
+  if (!termLive(analysis, compId, key)) return null;
+  return kindOfTerminal(compId, key);
+}
+
+function voltageBetween(pA, pB) {
+  if (pA === null || pB === null) return 0;
+  if (pA === pB) return 0;
+  return (pA === 'L' || pB === 'L') ? 230 : 0;
 }
 
 // A small "powered" indicator LED any component body can drop in — glows
@@ -1617,6 +1648,24 @@ function termPos(compId, key) {
   if (!comp) return { x: 0, y: 0 };
   const t = COMP_DEFS[comp.type].terminals[key];
   return { x: comp.x + t.x, y: comp.y + t.y };
+}
+
+function probePos(p) {
+  if (p.attachedTo) return termPos(p.attachedTo.compId, p.attachedTo.key);
+  return { x: p.x, y: p.y };
+}
+
+function findNearestTerminal(pt, maxDist) {
+  let best = null, bestDist = maxDist;
+  state.components.forEach(c => {
+    const def = COMP_DEFS[c.type];
+    Object.entries(def.terminals).forEach(([key, t]) => {
+      const tx = c.x + t.x, ty = c.y + t.y;
+      const d = Math.hypot(pt.x - tx, pt.y - ty);
+      if (d <= bestDist) { bestDist = d; best = { compId: c.id, key }; }
+    });
+  });
+  return best;
 }
 
 function escapeHtml(s) {
@@ -1743,6 +1792,82 @@ function renderPreview() {
   previewG.innerHTML = `<path d="${d}" fill="none" stroke="${c}" stroke-width="3" stroke-dasharray="6 5" opacity="0.85"/>${dots}${ring}`;
 }
 
+// ── VOLTMETER ─────────────────────────────────────────────────────────────────
+// A generic yellow/black digital multimeter — draggable body, tap the dial to
+// switch on/off, drag either probe tip onto any terminal to test there. The
+// reading itself just calls potentialAtTerminal() twice against whatever
+// `analysis` the main render() already computed for this frame, so it stays
+// in lockstep with the sparks/lit-up circuit test above — same source of
+// truth, no separate simulation to keep in sync.
+
+function meterBodySvg(m, readingText) {
+  const on = m.on;
+  const angleDeg = on ? -90 : -220;
+  const rad = angleDeg * Math.PI / 180;
+  const r = 22;
+  const nx = (50 + r * Math.cos(rad)).toFixed(1);
+  const ny = (114 + r * Math.sin(rad)).toFixed(1);
+  return `
+    <rect data-meter-body="1" x="0" y="0" width="${METER_W}" height="${METER_H}" rx="16" fill="#242424" stroke="#000" stroke-width="1" style="cursor:grab;"/>
+    <rect x="6" y="6" width="88" height="166" rx="11" fill="#f4b400" stroke="#b8860b" stroke-width="1.5" style="pointer-events:none;"/>
+    <rect x="16" y="18" width="68" height="38" rx="3" fill="${on ? '#cfe3c4' : '#9a9a90'}" stroke="#333" stroke-width="1.2" style="pointer-events:none;"/>
+    <text x="82" y="27" text-anchor="end" font-size="6" fill="#333" style="pointer-events:none;">AC VOLTS</text>
+    <text x="50" y="45" text-anchor="middle" font-family="'Courier New',monospace" font-size="13.5" font-weight="700" fill="#111" style="pointer-events:none;">${on ? readingText : ''}</text>
+    <rect x="18" y="62" width="18" height="9" rx="2" fill="#2a2a2a" style="pointer-events:none;"/>
+    <rect x="41" y="62" width="18" height="9" rx="2" fill="#2a2a2a" style="pointer-events:none;"/>
+    <rect x="64" y="62" width="18" height="9" rx="2" fill="#2a2a2a" style="pointer-events:none;"/>
+    <circle data-meter-toggle="1" cx="50" cy="114" r="28" fill="#3a3a3a" stroke="#111" stroke-width="1.5" style="cursor:pointer;"/>
+    <text x="50" y="92" text-anchor="middle" font-size="7" font-weight="700" fill="#eee" style="pointer-events:none;">V~</text>
+    <text x="24" y="130" text-anchor="middle" font-size="6" font-weight="700" fill="#eee" style="pointer-events:none;">OFF</text>
+    <circle cx="50" cy="114" r="4" fill="#ccc" style="pointer-events:none;"/>
+    <line x1="50" y1="114" x2="${nx}" y2="${ny}" stroke="#fff" stroke-width="2.5" stroke-linecap="round" style="pointer-events:none;"/>
+    <text x="50" y="150" text-anchor="middle" font-size="6.5" font-weight="800" fill="${on ? '#1f8a4c' : '#a33'}" style="pointer-events:none;">tap dial: ${on ? 'ON' : 'OFF'}</text>
+    <circle cx="30" cy="163" r="6.5" fill="#c0392b" stroke="#700" stroke-width="1" style="pointer-events:none;"/>
+    <circle cx="70" cy="163" r="6.5" fill="#111" stroke="#000" stroke-width="1" style="pointer-events:none;"/>`;
+}
+
+function probeMarkup(pos, kind) {
+  const isRed = kind === 'A';
+  const bodyFill = isRed ? '#d63b2f' : '#2a2a2a';
+  const bodyStroke = isRed ? '#8a1f1f' : '#000';
+  return `
+    <g data-probe="${kind}" transform="translate(${pos.x.toFixed(1)},${pos.y.toFixed(1)}) rotate(-30)" style="cursor:grab;">
+      <rect x="-30" y="-10" width="34" height="20" rx="6" fill="transparent"/>
+      <rect x="-28" y="-4.5" width="15" height="9" rx="2.5" fill="${bodyFill}" stroke="${bodyStroke}" stroke-width="1" style="pointer-events:none;"/>
+      <rect x="-14" y="-3" width="9" height="6" rx="1.5" fill="#9a9a9a" stroke="#555" stroke-width="0.6" style="pointer-events:none;"/>
+      <line x1="-6" y1="0" x2="0" y2="0" stroke="#ddd" stroke-width="1.8" stroke-linecap="round" style="pointer-events:none;"/>
+      <circle cx="0" cy="0" r="1.6" fill="#eee" style="pointer-events:none;"/>
+    </g>`;
+}
+
+function meterReadingText(m, analysis) {
+  const a = m.probeA.attachedTo, b = m.probeB.attachedTo;
+  if (!a || !b) return '– – –';
+  const pa = potentialAtTerminal(analysis, a.compId, a.key);
+  const pb = potentialAtTerminal(analysis, b.compId, b.key);
+  return voltageBetween(pa, pb).toFixed(1) + ' V';
+}
+
+function renderMeter(analysis) {
+  const m = state.meter;
+  if (!m) { meterG.innerHTML = ''; return; }
+  const readingText = meterReadingText(m, analysis);
+  const posA = probePos(m.probeA), posB = probePos(m.probeB);
+  const jackA = { x: m.x + 30, y: m.y + 163 }, jackB = { x: m.x + 70, y: m.y + 163 };
+  meterG.innerHTML = `
+    <path d="M ${jackA.x},${jackA.y} L ${posA.x.toFixed(1)},${posA.y.toFixed(1)}" stroke="#c0392b" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M ${jackB.x},${jackB.y} L ${posB.x.toFixed(1)},${posB.y.toFixed(1)}" stroke="#222" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <g transform="translate(${m.x},${m.y})">${meterBodySvg(m, readingText)}</g>
+    ${probeMarkup(posA, 'A')}
+    ${probeMarkup(posB, 'B')}`;
+}
+
+function syncMeterButtons() {
+  const hasMeter = !!state.meter;
+  document.getElementById('addMeterBtn').style.display = hasMeter ? 'none' : 'block';
+  document.getElementById('removeMeterBtn').style.display = hasMeter ? 'block' : 'none';
+}
+
 function updateStatusStrip() {
   const el = document.getElementById('statusStrip');
   if (drawing) {
@@ -1787,6 +1912,7 @@ function checkAutosaveRestore() {
   const nWord = n === 1 ? 'component' : 'components', wWord = w === 1 ? 'wire' : 'wires';
   if (confirm(`Restore your last unsaved board? (${n} ${nWord}, ${w} ${wWord})\n\nCancel to start with a blank board instead.`)) {
     state = saved;
+    if (!state.meter) state.meter = null;
     nextId = computeNextId(state);
     render();
     flashStatus('Restored your last session.');
@@ -1838,6 +1964,8 @@ function render() {
   renderWires(analysis);
   renderTerminalsLayer();
   renderPreview();
+  renderMeter(analysis);
+  syncMeterButtons();
   renderCircuitStatus(analysis);
   updateBanners(analysis);
   updateApplianceSounds(analysis);
@@ -1898,7 +2026,7 @@ function loadStarterLayout(circuit) {
   if (!circuit || !circuit.starter || !circuit.starter.length) return;
   if (state.components.length && !confirm(`Replace the current board with a starter layout for "${circuit.name}"? Unsaved changes will be lost.`)) return;
   snapshotForUndo();
-  state = { components: [], wires: [] };
+  state = { components: [], wires: [], meter: null };
   selection = null; drawing = null;
   let x = MARGIN + 10;
   const rowY = 380;
@@ -2323,8 +2451,17 @@ function deleteSelection() {
   if (selection.type === 'wire') {
     state.wires = state.wires.filter(w => w.id !== selection.id);
   } else {
-    state.wires = state.wires.filter(w => w.from.compId !== selection.id && w.to.compId !== selection.id);
-    state.components = state.components.filter(c => c.id !== selection.id);
+    const deadId = selection.id;
+    if (state.meter) {
+      [state.meter.probeA, state.meter.probeB].forEach(p => {
+        if (p.attachedTo && p.attachedTo.compId === deadId) {
+          const pos = termPos(deadId, p.attachedTo.key);
+          p.attachedTo = null; p.x = pos.x; p.y = pos.y;
+        }
+      });
+    }
+    state.wires = state.wires.filter(w => w.from.compId !== deadId && w.to.compId !== deadId);
+    state.components = state.components.filter(c => c.id !== deadId);
   }
   selection = null;
   render();
@@ -2343,6 +2480,20 @@ function deleteSelection() {
 boardSvg.addEventListener('pointerdown', e => {
   if (!e.isPrimary) return; // ignore a second finger on a touch panel
   const pt = getBoardPoint(e);
+
+  if (state.meter) {
+    const probeEl = e.target.closest('[data-probe]');
+    if (probeEl) { draggingProbe = probeEl.getAttribute('data-probe'); e.preventDefault(); return; }
+    const meterToggleEl = e.target.closest('[data-meter-toggle]');
+    if (meterToggleEl) { state.meter.on = !state.meter.on; playSfx('sfxSwitchElec'); render(); e.preventDefault(); return; }
+    const meterBodyEl = e.target.closest('[data-meter-body]');
+    if (meterBodyEl) {
+      draggingMeterBody = { offX: pt.x - state.meter.x, offY: pt.y - state.meter.y };
+      e.preventDefault();
+      return;
+    }
+  }
+
   const termEl = e.target.closest('[data-term]');
 
   if (drawing) {
@@ -2462,6 +2613,25 @@ boardSvg.addEventListener('pointerdown', e => {
 
 window.addEventListener('pointermove', e => {
   if (!e.isPrimary) return;
+  if (draggingProbe) {
+    const pt = getBoardPoint(e);
+    const near = findNearestTerminal(pt, 16);
+    const p = draggingProbe === 'A' ? state.meter.probeA : state.meter.probeB;
+    if (near) { p.attachedTo = near; }
+    else { p.attachedTo = null; p.x = pt.x; p.y = pt.y; }
+    const analysis = anyPowerOn() ? computeAnalysis() : null;
+    renderMeter(analysis);
+    return;
+  }
+  if (draggingMeterBody) {
+    const pt = getBoardPoint(e);
+    const m = state.meter;
+    m.x = clamp(pt.x - draggingMeterBody.offX, MARGIN, BOARD_W - METER_W - MARGIN);
+    m.y = clamp(pt.y - draggingMeterBody.offY, MARGIN, BOARD_H - METER_H - MARGIN);
+    const analysis = anyPowerOn() ? computeAnalysis() : null;
+    renderMeter(analysis);
+    return;
+  }
   if (drawing) {
     lastPointerPt = getBoardPoint(e);
     renderPreview();
@@ -2477,11 +2647,14 @@ window.addEventListener('pointermove', e => {
     renderComponents(analysis);
     renderWires(analysis);
     renderTerminalsLayer();
+    renderMeter(analysis);
   }
 });
 
 window.addEventListener('pointerup', e => {
   if (!e.isPrimary) return;
+  if (draggingProbe) { draggingProbe = null; return; }
+  if (draggingMeterBody) { draggingMeterBody = null; return; }
   if (draggingComp) {
     // Only a real move earns an undo step — a plain click/tap that never
     // actually dragged anywhere shouldn't push a no-op entry.
@@ -2607,7 +2780,7 @@ document.getElementById('clearWiresBtn').addEventListener('click', () => {
 document.getElementById('newBoardBtn').addEventListener('click', () => {
   if (state.components.length && !confirm('Clear the board? Unsaved changes will be lost.')) return;
   snapshotForUndo();
-  state = { components: [], wires: [] };
+  state = { components: [], wires: [], meter: null };
   selection = null; drawing = null;
   document.getElementById('lessonName').value = '';
   try { localStorage.removeItem(AUTOSAVE_KEY); } catch (e) { /* ignore */ }
@@ -2615,6 +2788,27 @@ document.getElementById('newBoardBtn').addEventListener('click', () => {
 });
 
 document.getElementById('snapToggle').addEventListener('change', e => { snapEnabled = e.target.checked; });
+
+// ── VOLTMETER ─────────────────────────────────────────────────────────────────
+
+document.getElementById('addMeterBtn').addEventListener('click', () => {
+  if (state.meter) return;
+  const mx = clamp(BOARD_W / 2 - METER_W / 2, MARGIN, BOARD_W - METER_W - MARGIN);
+  const my = MARGIN;
+  state.meter = {
+    x: mx, y: my, on: false,
+    probeA: { x: mx + 20, y: my + METER_H + 50, attachedTo: null },
+    probeB: { x: mx + 80, y: my + METER_H + 50, attachedTo: null },
+  };
+  render();
+  flashStatus('Voltmeter added — drag the probes onto terminals to test.');
+});
+
+document.getElementById('removeMeterBtn').addEventListener('click', () => {
+  state.meter = null;
+  render();
+  flashStatus('Voltmeter removed.');
+});
 
 // ── BOARD ZOOM ────────────────────────────────────────────────────────────────
 // The SVG's viewBox never changes — only its width/height attributes do, so
@@ -2677,6 +2871,7 @@ document.getElementById('loadLessonBtn').addEventListener('click', () => {
   if (!confirm(`Load "${name}"? This replaces the current board.`)) return;
   snapshotForUndo();
   state = JSON.parse(JSON.stringify(lessons[name]));
+  if (!state.meter) state.meter = null;
   nextId = computeNextId(state);
   selection = null; drawing = null;
   document.getElementById('lessonName').value = name;
@@ -2718,6 +2913,7 @@ document.getElementById('importJsonFile').addEventListener('change', e => {
       if (!data.components || !data.wires) throw new Error('Not a valid diagram file.');
       snapshotForUndo();
       state = data;
+      if (!state.meter) state.meter = null;
       nextId = computeNextId(state);
       selection = null; drawing = null;
       render();
