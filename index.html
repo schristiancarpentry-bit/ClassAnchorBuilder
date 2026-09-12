@@ -5,76 +5,176 @@
   <title>ClassAnchor Tracker Builder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
+    /* === ClassAnchor design tokens === */
     :root {
-      --accent: #c89b39; --accent-dk: #a07820;
-      --bg: #f5f4f2; --surface: #fff; --border: #ddd8d0;
-      --text: #1a1a1a; --soft: #6b7280;
+      --bg-top: #f6f1e8; --bg-bottom: #ece6da;
+      --ink: #2e2e2e; --soft: #61707d;
+      --border: rgba(0,0,0,0.10); --border-soft: rgba(0,0,0,0.08);
+      --panel-bg: linear-gradient(180deg,rgba(255,255,255,0.88),rgba(255,255,255,0.80));
+      --shadow-soft: 0 6px 18px rgba(0,0,0,0.06);
+      --shadow-card: 0 10px 28px rgba(0,0,0,0.09);
+      --shadow-lift: 0 14px 34px rgba(0,0,0,0.12);
+      --r-xl: 22px; --r-lg: 18px; --r-md: 14px; --r-sm: 12px;
+      --teal: #86d7d0; --teal-lt: #9fe3dc;
       --done: #22a06b; --danger: #c0392b;
-      --radius: 10px; --shadow: 0 2px 10px rgba(0,0,0,0.10);
     }
     * { box-sizing: border-box; }
-    body { font-family: system-ui, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
+    html, body { margin: 0; padding: 0; min-height: 100%; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+      background-attachment: fixed;
+      color: var(--ink);
+    }
 
-    .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow); position: sticky; top: 0; z-index: 10; }
-    .topbar-logo { width: 36px; }
-    .topbar-title { font-size: 1.1rem; font-weight: 800; color: var(--accent); }
-    .topbar-sub { font-size: 0.82rem; color: var(--soft); }
+    /* === Topbar === */
+    .topbar {
+      background: linear-gradient(180deg,rgba(255,255,255,0.82),rgba(255,255,255,0.70));
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1.5px solid rgba(0,0,0,0.08);
+      box-shadow: var(--shadow-soft);
+      padding: 14px 28px;
+      display: flex; align-items: center; gap: 14px;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .topbar-logo { width: 40px; height: 40px; border-radius: var(--r-md); }
+    .topbar-title { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); line-height: 1.1; }
+    .topbar-sub { font-size: 0.82rem; color: var(--soft); margin-top: 2px; }
 
-    .layout { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
+    /* === Layout === */
+    .layout { max-width: 820px; margin: 0 auto; padding: 28px 20px 60px; }
 
-    .card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px; }
-    .card-title { font-size: 1rem; font-weight: 700; margin: 0 0 16px; }
+    /* === Panel (was .card) === */
+    .card {
+      background: var(--panel-bg);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: var(--r-xl);
+      border: 1.5px solid rgba(0,0,0,0.09);
+      box-shadow: var(--shadow-card);
+      padding: 24px 26px;
+      margin-bottom: 18px;
+    }
+    .card-title {
+      font-size: 1.35rem; font-weight: 800;
+      letter-spacing: -0.025em; line-height: 1.1;
+      color: #101820; margin: 0 0 18px;
+    }
 
-    label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 4px; margin-top: 12px; }
+    /* === Form controls === */
+    label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--soft); margin-bottom: 5px; margin-top: 14px; letter-spacing: 0.01em; text-transform: uppercase; }
     label:first-child { margin-top: 0; }
-    input, select, textarea { width: 100%; padding: 9px 12px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.92rem; font-family: inherit; }
+    input, select, textarea {
+      width: 100%; padding: 10px 14px;
+      border-radius: var(--r-md);
+      border: 1.5px solid rgba(0,0,0,0.12);
+      background: rgba(255,255,255,0.82);
+      color: var(--ink);
+      font-size: 0.92rem; font-family: inherit;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
     textarea { resize: vertical; }
-    input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(134,215,208,0.22);
+    }
 
     .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
     @media (max-width: 600px) { .row2, .row3 { grid-template-columns: 1fr; } }
 
-    .hint { font-size: 0.78rem; color: var(--soft); margin-top: 4px; }
+    .hint { font-size: 0.8rem; color: var(--soft); margin-top: 5px; }
 
-    .btn { padding: 9px 18px; border-radius: 7px; border: none; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-primary:hover { background: var(--accent-dk); }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-ghost { background: var(--border); color: var(--text); }
-    .btn-ghost:hover { background: #ccc; }
-    .btn-success { background: var(--done); color: #fff; }
-    .btn-success:hover { background: #1a8a58; }
+    /* === Buttons === */
+    .btn {
+      padding: 10px 20px; border-radius: var(--r-md);
+      border: 1.5px solid rgba(0,0,0,0.12);
+      font-size: 0.9rem; font-weight: 700;
+      cursor: pointer; transition: box-shadow 0.15s, opacity 0.15s;
+      font-family: inherit;
+    }
+    .btn-primary {
+      background: linear-gradient(180deg, var(--teal-lt), var(--teal));
+      border-color: rgba(113,196,188,0.7);
+      color: #19232e;
+      box-shadow: 0 6px 16px rgba(134,215,208,0.30);
+    }
+    .btn-primary:hover { box-shadow: 0 8px 22px rgba(134,215,208,0.44); }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+    .btn-ghost {
+      background: rgba(255,255,255,0.86);
+      color: var(--ink);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,1); box-shadow: var(--shadow-soft); }
+    .btn-success {
+      background: linear-gradient(180deg, #34d17a, #22a06b);
+      border-color: rgba(34,160,107,0.5);
+      color: #fff;
+      box-shadow: 0 6px 16px rgba(34,160,107,0.25);
+    }
+    .btn-success:hover { box-shadow: 0 8px 22px rgba(34,160,107,0.38); }
 
     .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
 
-    .status-bar { padding: 10px 16px; border-radius: 7px; font-size: 0.88rem; margin-top: 14px; display: none; }
-    .status-bar.info    { background: #e8f4fd; border-left: 3px solid #3b82f6; color: #1e40af; }
-    .status-bar.success { background: #e6f9f0; border-left: 3px solid var(--done); color: #145a35; }
-    .status-bar.error   { background: #fef2f2; border-left: 3px solid var(--danger); color: var(--danger); }
+    /* === Status bars === */
+    .status-bar { padding: 11px 16px; border-radius: var(--r-md); font-size: 0.88rem; margin-top: 14px; display: none; font-weight: 600; }
+    .status-bar.info    { background: rgba(59,130,246,0.10); border-left: 3px solid #3b82f6; color: #1e40af; }
+    .status-bar.success { background: rgba(34,160,107,0.10); border-left: 3px solid var(--done); color: #145a35; }
+    .status-bar.error   { background: rgba(192,57,43,0.08); border-left: 3px solid var(--danger); color: var(--danger); }
 
+    /* === Output === */
     .output-area { display: none; }
-    .output-preview { background: #1a1a1a; color: #e0ddd8; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 0.78rem; max-height: 360px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; margin-top: 12px; }
+    .output-preview {
+      background: rgba(20,24,32,0.92); color: #d8e0e8;
+      border-radius: var(--r-lg); padding: 16px;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.76rem; max-height: 320px;
+      overflow-y: auto; white-space: pre-wrap; word-break: break-all; margin-top: 12px;
+      border: 1.5px solid rgba(255,255,255,0.06);
+    }
 
+    /* === Install steps === */
     .step-list { list-style: none; padding: 0; margin: 0; }
-    .step-list li { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; display: flex; gap: 10px; align-items: flex-start; }
+    .step-list li {
+      padding: 10px 0; border-bottom: 1px solid var(--border-soft);
+      font-size: 0.9rem; display: flex; gap: 12px; align-items: flex-start;
+    }
     .step-list li:last-child { border: none; }
-    .step-num { background: var(--accent); color: #fff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; flex-shrink: 0; }
-    .step-text code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
+    .step-num {
+      background: linear-gradient(180deg, var(--teal-lt), var(--teal));
+      color: #19232e; border-radius: 50%;
+      width: 24px; height: 24px; display: flex;
+      align-items: center; justify-content: center;
+      font-size: 0.74rem; font-weight: 800; flex-shrink: 0;
+    }
+    .step-text code {
+      background: rgba(0,0,0,0.06); padding: 1px 6px;
+      border-radius: 6px; font-size: 0.84em;
+      border: 1px solid rgba(0,0,0,0.08);
+    }
 
-    .api-warning { background: #fffbeb; border-left: 3px solid var(--accent); border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; margin-bottom: 16px; color: #7a5a00; }
+    /* === API key warning === */
+    .api-warning {
+      background: rgba(134,215,208,0.12);
+      border-left: 3px solid var(--teal);
+      border-radius: var(--r-sm); padding: 10px 14px;
+      font-size: 0.82rem; margin-bottom: 16px; color: #1a4a48;
+    }
 
-    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+    /* === Spinner === */
+    .spinner { display: inline-block; width: 15px; height: 15px; border: 2px solid rgba(25,35,46,0.25); border-top-color: #19232e; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
 
 <div class="topbar">
-  <img src="app/assets/classanchor-logo.svg" class="topbar-logo" alt="" onerror="this.style.display='none'" />
+  <img src="https://classanchor-purchase.netlify.app/assets/classanchor-icon.png" class="topbar-logo" alt="ClassAnchor" onerror="this.style.display='none'" />
   <div>
-    <div class="topbar-title">Tracker Package Builder</div>
-    <div class="topbar-sub">Generate ClassAnchor tracker packages for any qualification</div>
+    <div class="topbar-title">ClassAnchor</div>
+    <div class="topbar-sub">Tracker Package Builder — generate a qualification package for any awarding body</div>
   </div>
 </div>
 
@@ -163,12 +263,72 @@
     <p class="hint">Any extra guidance for the AI — unit focus, assessment style, mandatory vs optional, etc.</p>
   </div>
 
-  <!-- STEP 3: GENERATE -->
+  <!-- STEP 3: LOOK UP UNITS -->
   <div class="card">
-    <div class="card-title">Step 3 — Generate Package</div>
-    <p style="font-size:0.9rem;color:var(--soft);margin:0 0 14px;">Claude will research the qualification and generate the full unit list, learning outcomes and assessment criteria. This takes about 20–40 seconds.</p>
-    <button id="generateBtn" class="btn btn-primary" onclick="generatePackage()" type="button">Generate Package</button>
+    <div class="card-title">Step 3 — Look Up Units</div>
+    <p style="font-size:0.9rem;color:var(--soft);margin:0 0 14px;">Claude's own guess at unit codes can be wrong (it doesn't reliably search the web). Instead: copy the prompt below into Claude.ai, ChatGPT, or any AI chat that can actually search — let it find the real official spec — then paste its reply back in below. Nothing is generated in full yet; you'll pick which units to include next.</p>
+    <button id="copyLookupPromptBtn" class="btn btn-primary" onclick="copyLookupPrompt()" type="button">📋 Copy Lookup Prompt</button>
+    <div id="lookupPromptStatus" class="status-bar"></div>
+
+    <label for="pastedUnitsInput" style="margin-top:18px;">Paste the reply here</label>
+    <textarea id="pastedUnitsInput" rows="8" placeholder="Paste the full reply from your AI chat here…"></textarea>
+    <div class="actions">
+      <button id="parseUnitsBtn" class="btn btn-primary" onclick="parsePastedUnits()" type="button">Parse Units</button>
+    </div>
+    <div id="unitsStatus" class="status-bar"></div>
+  </div>
+
+  <!-- STEP 4: CHOOSE WHAT TO INCLUDE -->
+  <div id="unitsArea" class="card" style="display:none;">
+    <div class="card-title">Step 4 — Choose What to Include</div>
+    <p class="hint" style="margin-top:0;">Mandatory units are ticked by default. Untick anything you don't want, tick any optional units you do want, or add a unit by hand if one's missing.</p>
+
+    <div class="actions" style="margin-top:0;">
+      <button class="btn btn-ghost" onclick="setAllUnits('all')" type="button">Select all</button>
+      <button class="btn btn-ghost" onclick="setAllUnits('mandatory')" type="button">Mandatory only</button>
+      <button class="btn btn-ghost" onclick="setAllUnits('none')" type="button">Clear all</button>
+    </div>
+
+    <div id="unitChecklist" style="margin-top:14px;"></div>
+
+    <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border-soft);">
+      <label style="margin-top:0;">Add a unit by hand (optional)</label>
+      <div class="row3">
+        <input id="customUnitCode" type="text" placeholder="Unit code, e.g. Unit 201/601" />
+        <input id="customUnitTitle" type="text" placeholder="Unit title" />
+        <input id="customUnitCredits" type="number" placeholder="Credits" />
+      </div>
+      <div class="row2" style="margin-top:14px;">
+        <input id="customUnitAccred" type="text" placeholder="Accreditation number, e.g. A/504/6719 (optional)" />
+      </div>
+      <div class="actions" style="margin-top:10px;">
+        <label style="display:inline-flex;align-items:center;gap:6px;text-transform:none;font-weight:600;font-size:0.85rem;margin:0;">
+          <input id="customUnitMandatory" type="checkbox" style="width:auto;" /> Mandatory
+        </label>
+        <button class="btn btn-ghost" onclick="addCustomUnit()" type="button">+ Add unit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5: GENERATE THE FULL DETAIL -->
+  <div id="generateArea" class="card" style="display:none;">
+    <div class="card-title">Step 5 — Generate the Full Detail</div>
+    <p style="font-size:0.9rem;color:var(--soft);margin:0 0 14px;">Same pattern as Step 3: copy a prompt into an AI chat that can actually search the web, paste its reply back — far more reliable than one direct API call, since you see the real source before it becomes package data.</p>
+    <button id="copyFullDetailPromptBtn" class="btn btn-primary" onclick="copyFullDetailPrompt()" type="button" disabled>📋 Copy Full-Detail Prompt</button>
+    <p id="fullDetailHint" class="hint">Tick at least one unit above first.</p>
+    <div id="fullDetailPromptStatus" class="status-bar"></div>
+
+    <label for="pastedFullDetailInput" style="margin-top:18px;">Paste the reply here</label>
+    <textarea id="pastedFullDetailInput" rows="10" placeholder="Paste the full reply from your AI chat here…"></textarea>
+    <div class="actions">
+      <button id="parseFullDetailBtn" class="btn btn-primary" onclick="parsePastedFullDetail()" type="button">Parse &amp; Build Package</button>
+    </div>
     <div id="genStatus" class="status-bar"></div>
+
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border-soft);">
+      <p class="hint" style="margin:0 0 10px;">Or — quicker but thinner, one direct API call using your saved key:</p>
+      <button id="generateBtn" class="btn btn-ghost" onclick="generatePackage()" type="button" disabled>⚡ Quick Generate (direct API)</button>
+    </div>
   </div>
 
   <!-- OUTPUT -->
@@ -188,11 +348,10 @@
     <div style="margin-top:20px;">
       <div class="card-title" style="font-size:0.9rem;">Installation instructions for the customer</div>
       <ol class="step-list">
-        <li><span class="step-num">1</span><span class="step-text">Download the package file and place it in the ClassAnchor <code>app/</code> folder alongside the other tracker files.</span></li>
-        <li><span class="step-num">2</span><span class="step-text">Open <code>6706-tracker.html</code> in a text editor. Just before <code>&lt;/body&gt;</code>, add:<br><code id="scriptTagTracker"></code></span></li>
-        <li><span class="step-num">3</span><span class="step-text">Open <code>index.html</code> (ClassAnchor) in a text editor. Just before <code>&lt;/body&gt;</code>, add the same line.</span></li>
-        <li><span class="step-num">4</span><span class="step-text">Reload ClassAnchor. When creating a class, the new qualification appears in the level dropdown.</span></li>
-        <li><span class="step-num">5</span><span class="step-text">Open a student → click <b>Track Student</b> → the new qualification's units and learning outcomes are ready.</span></li>
+        <li><span class="step-num">1</span><span class="step-text">Download the package file using the button above.</span></li>
+        <li><span class="step-num">2</span><span class="step-text">Open ClassAnchor and go to <b>Admin → Awarding Body Tracker</b>.</span></li>
+        <li><span class="step-num">3</span><span class="step-text">Click <b>📦 Install Package</b> and select the downloaded <code>.js</code> file.</span></li>
+        <li><span class="step-num">4</span><span class="step-text">Done — the qualification appears in the level dropdown when creating a class.</span></li>
       </ol>
     </div>
   </div>
@@ -205,6 +364,8 @@
 const KEY_STORE = 'ca_builder_api_key';
 let generatedCode = '';
 let generatedFilename = '';
+let proposedUnits = [];   // units returned by the lookup step, each with __include flag
+let unitSeq = 0;          // gives each proposed unit a stable DOM id
 
 // ── API KEY ───────────────────────────────────────────────────────────────────
 
@@ -229,39 +390,214 @@ function clearKey() {
   showStatus('keyStatus', 'info', 'Key cleared.');
 }
 
-// ── GENERATE ──────────────────────────────────────────────────────────────────
+// ── SHARED: read the Step 2 form ────────────────────────────────────────────
 
-async function generatePackage() {
-  const apiKey = document.getElementById('apiKey').value.trim();
-  if (!apiKey) { showStatus('genStatus', 'error', 'Please enter your Claude API key first.'); return; }
+function readQualForm() {
+  const subject  = document.getElementById('qualSubject').value.trim();
+  const awarding = document.getElementById('qualAwardingBody').value;
+  const name     = document.getElementById('qualName').value.trim();
+  const code     = document.getElementById('qualCode').value.trim();
+  const level    = document.getElementById('qualLevel').value;
+  const credits  = document.getElementById('qualCredits').value.trim();
+  const type     = document.getElementById('qualType').value;
+  const extra    = document.getElementById('qualExtra').value.trim();
+  return { subject, awarding, name, code, level, credits, type, extra };
+}
 
-  const subject     = document.getElementById('qualSubject').value.trim();
-  const awarding    = document.getElementById('qualAwardingBody').value;
-  const name        = document.getElementById('qualName').value.trim();
-  const code        = document.getElementById('qualCode').value.trim();
-  const level       = document.getElementById('qualLevel').value;
-  const credits     = document.getElementById('qualCredits').value.trim();
-  const type        = document.getElementById('qualType').value;
-  const extra       = document.getElementById('qualExtra').value.trim();
+async function callClaude(apiKey, systemPrompt, userPrompt, maxTokens) {
+  const response = await fetch('/.netlify/functions/claude-proxy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      apiKey,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }]
+    })
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${response.status}`);
+  }
+  const data = await response.json();
+  return data.content?.[0]?.text || '';
+}
 
-  if (!subject || !name) { showStatus('genStatus', 'error', 'Please fill in at least Subject and Qualification Name.'); return; }
+// ── STEP 3: LOOK UP UNITS (copy a prompt, paste the reply from a real chat) ─
 
-  const awardingShort = awarding.split('/')[0].trim(); // e.g. "BTEC" from "BTEC / Pearson"
-  const qualId = slugify(`${awardingShort}-${subject}${code ? '-' + code : ''}`);
-  const displayName = `${level} ${type} in ${subject}`;
-  const shortName = `${level} ${subject}`.substring(0, 35);
+function buildLookupPrompt(f) {
+  return `I need the REAL, official unit list for a UK qualification. Please search the web for the official specification — the awarding body's own site, or the UK register of regulated qualifications at register.ofqual.gov.uk — and base your answer on what you actually find there. Don't rely on general knowledge alone; if you can't search, say so instead of guessing.
 
-  const btn = document.getElementById('generateBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Generating…';
-  showStatus('genStatus', 'info', 'Calling Claude API — this takes 20–40 seconds…');
+Qualification: ${f.name || '(not specified)'}
+Subject: ${f.subject || '(not specified)'}
+Qualification code: ${f.code || 'not specified — find the correct one'}
+Awarding body: ${f.awarding}
+Level: ${f.level}
+Type: ${f.type}
+${f.extra ? `Additional context: ${f.extra}` : ''}
+
+Reply with ONLY a JSON array (no other text, no markdown code fences) listing every unit in the official specification — mandatory AND optional/pathway units — in exactly this shape:
+
+[
+  {
+    "code": "the awarding body's own unit number, e.g. \\"Unit 201/601\\"",
+    "accreditationNumber": "the official Ofqual/regulator unit accreditation number, e.g. \\"A/504/6719\\" — use null if you can't verify a real one from your search",
+    "title": "full unit title",
+    "credits": 6,
+    "glh": 60,
+    "mandatory": true,
+    "summary": "one short plain-English sentence on what this unit covers"
+  }
+]
+
+Important: every "code" and "accreditationNumber" must come from something you actually found by searching — never invent or guess one. If you're not confident a code is real, use null for it rather than making one up.`;
+}
+
+function copyLookupPrompt() {
+  const f = readQualForm();
+  if (!f.subject || !f.name) { showStatus('lookupPromptStatus', 'error', 'Please fill in at least Subject and Qualification Name in Step 2 first.'); return; }
+
+  const prompt = buildLookupPrompt(f);
+  navigator.clipboard.writeText(prompt).then(() => {
+    showStatus('lookupPromptStatus', 'success', '✓ Prompt copied. Paste it into Claude.ai (or any AI chat with real web search), then paste its reply into the box below.');
+  }).catch(() => {
+    showStatus('lookupPromptStatus', 'error', 'Could not copy automatically — select and copy the prompt text below by hand.');
+    const ta = document.getElementById('pastedUnitsInput');
+    ta.value = prompt;
+    ta.placeholder = 'Copy failed — this is the prompt to paste into your AI chat. Replace it with the chat\'s reply once you have it.';
+  });
+}
+
+function parsePastedUnits() {
+  const raw = document.getElementById('pastedUnitsInput').value.trim();
+  if (!raw) { showStatus('unitsStatus', 'error', 'Paste the reply from your AI chat first.'); return; }
+
+  document.getElementById('unitsArea').style.display = 'none';
+  document.getElementById('generateArea').style.display = 'none';
   document.getElementById('outputArea').style.display = 'none';
 
-  const systemPrompt = `You are a UK vocational curriculum data specialist. Your job is to generate accurate qualification data for ClassAnchor, an educational tracking tool used in UK colleges and training providers.
+  try {
+    const arrMatch = raw.match(/\[[\s\S]*\]/);
+    if (!arrMatch) throw new Error('Could not find a JSON unit list in the pasted text. Make sure you pasted the AI\'s full reply.');
+    const units = JSON.parse(arrMatch[0]);
+    if (!Array.isArray(units) || !units.length) throw new Error('No units found in the pasted reply.');
 
-Output ONLY a single raw JavaScript object literal — no variable declaration, no markdown code fences, no explanation, no comments, just the object starting with { and ending with }.
+    proposedUnits = units.map(u => ({
+      code: u.code || '', accreditationNumber: u.accreditationNumber || null,
+      title: u.title || 'Untitled unit',
+      credits: Number(u.credits) || 0, glh: Number(u.glh) || (Number(u.credits) || 0) * 10,
+      mandatory: !!u.mandatory, summary: u.summary || '',
+      __include: !!u.mandatory, __id: 'u' + (unitSeq++)
+    }));
 
-The object must exactly match this structure:
+    renderUnitChecklist();
+    document.getElementById('unitsArea').style.display = 'block';
+    document.getElementById('generateArea').style.display = 'block';
+    document.getElementById('unitsArea').scrollIntoView({ behavior: 'smooth' });
+    const verified = units.filter(u => u.accreditationNumber).length;
+    showStatus('unitsStatus', 'success', `✓ Found ${units.length} units (${units.filter(u => u.mandatory).length} mandatory, ${verified} with a verified accreditation number). Choose what to include below.`);
+  } catch (err) {
+    showStatus('unitsStatus', 'error', `Error: ${err.message}`);
+  }
+}
+
+// ── STEP 4: CHECKLIST UI ─────────────────────────────────────────────────
+
+function renderUnitChecklist() {
+  const container = document.getElementById('unitChecklist');
+  container.innerHTML = '';
+  proposedUnits.forEach(u => {
+    const row = document.createElement('label');
+    row.style.cssText = 'display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border-soft);cursor:pointer;';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !!u.__include;
+    cb.style.cssText = 'width:auto;margin-top:3px;';
+    cb.addEventListener('change', () => { u.__include = cb.checked; updateGenerateButtonState(); });
+
+    const text = document.createElement('div');
+    text.style.cssText = 'flex:1;';
+    const badge = u.mandatory
+      ? '<span style="font-size:0.68rem;font-weight:800;color:#145a35;background:rgba(34,160,107,0.12);padding:1px 7px;border-radius:6px;margin-left:6px;">MANDATORY</span>'
+      : '<span style="font-size:0.68rem;font-weight:700;color:var(--soft);background:rgba(0,0,0,0.06);padding:1px 7px;border-radius:6px;margin-left:6px;">OPTIONAL</span>';
+    const accredText = u.accreditationNumber
+      ? `Accred: ${escapeHtml(u.accreditationNumber)}`
+      : '<span style="color:var(--danger);">Accred: not verified</span>';
+    text.innerHTML = `<div style="font-size:0.9rem;font-weight:700;">${escapeHtml(u.title)}${badge}</div>
+      <div style="font-size:0.78rem;color:var(--soft);margin-top:2px;">${escapeHtml(u.code || 'No code')} · ${accredText} · ${u.credits} credits · ${u.glh} GLH</div>
+      ${u.summary ? `<div style="font-size:0.82rem;color:var(--ink);margin-top:3px;">${escapeHtml(u.summary)}</div>` : ''}`;
+
+    row.appendChild(cb);
+    row.appendChild(text);
+    container.appendChild(row);
+  });
+  updateGenerateButtonState();
+}
+
+function setAllUnits(mode) {
+  proposedUnits.forEach(u => {
+    u.__include = mode === 'all' ? true : mode === 'mandatory' ? !!u.mandatory : false;
+  });
+  renderUnitChecklist();
+}
+
+function addCustomUnit() {
+  const title = document.getElementById('customUnitTitle').value.trim();
+  if (!title) { showStatus('unitsStatus', 'error', 'Give the unit a title before adding it.'); return; }
+  const code = document.getElementById('customUnitCode').value.trim();
+  const accreditationNumber = document.getElementById('customUnitAccred').value.trim() || null;
+  const credits = Number(document.getElementById('customUnitCredits').value) || 0;
+  const mandatory = document.getElementById('customUnitMandatory').checked;
+
+  proposedUnits.push({
+    code, accreditationNumber, title, credits, glh: credits * 10, mandatory,
+    summary: '', __include: true, __id: 'u' + (unitSeq++)
+  });
+  renderUnitChecklist();
+
+  document.getElementById('customUnitCode').value = '';
+  document.getElementById('customUnitAccred').value = '';
+  document.getElementById('customUnitTitle').value = '';
+  document.getElementById('customUnitCredits').value = '';
+  document.getElementById('customUnitMandatory').checked = false;
+}
+
+function updateGenerateButtonState() {
+  const count = proposedUnits.filter(u => u.__include).length;
+  document.getElementById('generateBtn').disabled = count === 0;
+  const copyBtn = document.getElementById('copyFullDetailPromptBtn');
+  const hint = document.getElementById('fullDetailHint');
+  copyBtn.disabled = count === 0;
+  hint.textContent = count === 0 ? 'Tick at least one unit above first.' : `${count} unit${count === 1 ? '' : 's'} selected — ready to generate.`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+// ── STEP 5: GENERATE THE FULL DETAIL (only for the ticked units) ───────────
+// Two paths share everything except how the raw AI reply is obtained:
+//   1. copyFullDetailPrompt() / parsePastedFullDetail() — copy a prompt into
+//      a real AI chat with web search, paste the reply back. Recommended —
+//      same proven pattern as Step 3's unit lookup.
+//   2. generatePackage() — one direct API call. Quicker, thinner, no web
+//      search on Claude's side, so more prone to plausible-but-generic
+//      content for anything Claude hasn't memorised precisely.
+// Both funnel into finalizePackageFromRaw(), which never trusts the AI's
+// echoed unit metadata — only outcomes/criteria — matched back to the
+// ticked units by code (see the comment inside for why).
+
+function buildFullDetailInstructions() {
+  return `For EVERY learning outcome, classify it as exactly one of two types — this is the most important part of the job, because it decides how the tutor tracks it day to day:
+
+- "formative" — knowledge, understanding or a skill the learner needs to be TAUGHT and have COVERED over the course. Ongoing coverage, not itself the final proof of achievement. E.g. "Know the health and safety regulations..." (vocational, later tested by an end-of-unit multiple-choice exam), or "Understand the writer's use of structure in the set text" (GCSE English, built up over several lessons before the exam).
+- "summative" — the actual final assessed task or output that PROVES the outcome has been achieved, tracked with a single sign-off rather than a checklist, because it's judged as a whole rather than criterion-by-criterion by the tutor. Whatever form the real qualification actually uses: a practical task observed by an assessor (vocational trades), a written exam paper, a piece of coursework/NEA, a controlled assessment, or a portfolio of evidence. E.g. "Be able to construct roofing structures" (vocational, assessed by watching the learner do it), or "Write an analytical essay on the set text under exam conditions" (GCSE English, assessed by the exam paper itself).
+
+Decide per-outcome, per-qualification, the way the real specification actually splits — don't force every unit to have both types if it doesn't: a purely knowledge unit can be entirely "formative"; a purely coursework-based unit may be entirely "summative".
+
+Reply with ONLY a single raw JSON object — no markdown code fences, no explanation, no comments, just the object starting with { and ending with } — in exactly this structure:
 {
   "title": "Full qualification title",
   "short": "Short label max 35 chars",
@@ -270,6 +606,7 @@ The object must exactly match this structure:
   "units": [
     {
       "code": "Unit code",
+      "accreditationNumber": "Official unit accreditation number, or null",
       "title": "Full unit title",
       "credits": 6,
       "glh": 60,
@@ -277,11 +614,24 @@ The object must exactly match this structure:
       "outcomes": [
         {
           "ref": "1",
-          "title": "Learning outcome — use 'The learner will be able to...' phrasing",
+          "type": "formative",
+          "title": "Learning outcome — use 'Know...' / 'Understand...' / 'The learner will be able to...' phrasing",
+          "weight": 20,
+          "qcount": 5,
           "criteria": [
             "Assessment criterion (specific, measurable, starts with a verb)",
             "Assessment criterion",
             "Assessment criterion"
+          ]
+        },
+        {
+          "ref": "2",
+          "type": "summative",
+          "title": "Learning outcome — use 'Be able to...' / 'Produce...' phrasing",
+          "assessmentMethod": "Short plain-English description of how this is actually assessed, e.g. 'Practical assignment — observed by assessor', 'Written exam paper', 'Coursework — extended writing', 'Portfolio of evidence'",
+          "criteria": [
+            "What must be demonstrated or produced (specific, measurable)",
+            "..."
           ]
         }
       ]
@@ -290,77 +640,162 @@ The object must exactly match this structure:
 }
 
 Rules:
-- Include all mandatory units (typically 5–10)
-- Each unit must have 3–6 learning outcomes
-- Each learning outcome must have 2–5 assessment criteria
-- Assessment criteria must be specific and measurable
-- Unit codes should reflect the official specification where known
-- GLH (Guided Learning Hours) values should be realistic for the credit value (roughly 10 GLH per credit)
-- Base data on the official UK qualification specification from the awarding body
-- If you are uncertain about exact unit names, use the most accurate known data and clearly representative content`;
+- "units" must contain exactly the units listed below — same count, same order, same codes/accreditationNumbers/titles/credits/glh/mandatory.
+- Every outcome must have a "type" of exactly "formative" or "summative" — never omit it, never invent a third value.
+- "weight" (% exam weighting) and "qcount" (number of exam questions) are OPTIONAL and only meaningful on "formative" outcomes that are genuinely exam-weighted — omit both (or use null) if not applicable.
+- "assessmentMethod" is OPTIONAL and only meaningful on "summative" outcomes — a short plain-English description of how it's really assessed for this qualification.
+- Each unit must have 2–6 learning outcomes in total, mixing formative/summative the way the real qualification does.
+- Each learning outcome must have 2–5 criteria.
+- Criteria must be specific and measurable.
+- Base outcomes/criteria on the official UK qualification specification from the awarding body.`;
+}
 
-  const userPrompt = `Generate the complete qualification data object for:
+function buildFullDetailPrompts(f, selected) {
+  const unitList = selected.map(u => ({ code: u.code, accreditationNumber: u.accreditationNumber || null, title: u.title, credits: u.credits, glh: u.glh, mandatory: u.mandatory }));
 
-Subject: ${subject}
-Qualification Name: ${name}
-Qualification Code: ${code || 'Not specified — use best known code'}
-Awarding Body: ${awarding}
-Level: ${level}
-Qualification Type: ${type}
-Total Credits: ${credits || 'Use the official total'}
-${extra ? `Additional context: ${extra}` : ''}
+  const systemPrompt = `You are a UK curriculum and qualifications data specialist. Your job is to generate accurate tracking data for ClassAnchor, an educational tracking tool used across UK colleges, schools and training providers for any qualification type — vocational, technical or academic (e.g. GCSE, A Level, BTEC, City & Guilds, NCFE).
 
-Include all mandatory units with accurate unit codes, titles, learning outcomes and assessment criteria based on the official ${awarding} specification for this qualification.`;
+The tutor has already chosen EXACTLY which units to include, with verified codes (provided below). Generate full learning outcomes for THOSE UNITS ONLY — do not add, remove, merge, split or rename any unit, and keep each unit's code, accreditationNumber, title, credits, glh and mandatory flag exactly as given — copy them through unchanged, do not alter or re-guess them.
+
+${buildFullDetailInstructions()}`;
+
+  const userPrompt = `Generate the full qualification data object for:
+
+Subject: ${f.subject}
+Qualification Name: ${f.name}
+Qualification Code: ${f.code || 'Not specified — use best known code'}
+Awarding Body: ${f.awarding}
+Level: ${f.level}
+Qualification Type: ${f.type}
+Total Credits: ${f.credits || 'Use the official total'}
+${f.extra ? `Additional context: ${f.extra}` : ''}
+
+Generate learning outcomes and assessment criteria for EXACTLY these units (and only these — do not add any others):
+${JSON.stringify(unitList, null, 2)}`;
+
+  return { systemPrompt, userPrompt, unitList };
+}
+
+function buildFullDetailChatPrompt(f, selected) {
+  const { unitList } = buildFullDetailPrompts(f, selected);
+  return `I need the REAL, official learning outcomes and assessment criteria for a UK qualification. Please search the web — the awarding body's own site, or the UK register of regulated qualifications at register.ofqual.gov.uk — and base your answer on what you actually find there. Don't rely on general knowledge alone; if you can't find something for a specific unit, say so rather than inventing it.
+
+Qualification: ${f.name || '(not specified)'}
+Subject: ${f.subject || '(not specified)'}
+Awarding Body: ${f.awarding}
+Level: ${f.level}
+Qualification Type: ${f.type}
+${f.extra ? `Additional context: ${f.extra}` : ''}
+
+Generate the full learning outcomes and assessment criteria for EXACTLY these units — same count, same order, same codes/accreditationNumbers/titles/credits/glh/mandatory (copy these through unchanged, don't re-guess them):
+${JSON.stringify(unitList, null, 2)}
+
+${buildFullDetailInstructions()}`;
+}
+
+// Shared finishing step for both generation paths — parses the raw AI reply,
+// reconciles it against the ticked units by code, normalises "type", and
+// builds the downloadable package. Throws a user-facing Error on any problem.
+function finalizePackageFromRaw(rawContent, selected, f, statusId) {
+  const objMatch = rawContent.match(/\{[\s\S]*\}/);
+  if (!objMatch) throw new Error('Could not find a valid object in the reply. Make sure you pasted the AI\'s full response.');
+
+  const parsed = JSON.parse(objMatch[0]);
+  if (!parsed.units || !Array.isArray(parsed.units)) throw new Error('Generated data is missing a units array.');
+
+  // ClassAnchor's tracker keys every student's progress by unit.code (sd.units[code]),
+  // so if the AI renames, drops, reorders, or hallucinates a code here — despite being
+  // told not to — that silently corrupts tracking once the package is installed. Never
+  // trust the AI's echoed metadata: only take outcomes/criteria from it, matched back to
+  // the tutor's ticked units (Step 4) by code, since array order isn't guaranteed either.
+  const byCode = new Map(parsed.units.map(u => [String(u.code || '').trim(), u]));
+  const missing = [];
+  const reconciled = selected.map(u => {
+    const match = byCode.get(String(u.code || '').trim());
+    if (!match || !Array.isArray(match.outcomes) || !match.outcomes.length) { missing.push(u.code || u.title); return null; }
+    // Normalise "type" defensively — the tracker treats a missing/invalid
+    // type as a hard signal, not a soft default, so a slip here shouldn't
+    // silently mis-file a summative task as formative coverage or vice versa.
+    const outcomes = match.outcomes.map(o => ({ ...o, type: o.type === 'summative' ? 'summative' : 'formative' }));
+    return {
+      code: u.code, accreditationNumber: u.accreditationNumber || null, title: u.title,
+      credits: u.credits, glh: u.glh, mandatory: u.mandatory, outcomes
+    };
+  });
+  if (missing.length) throw new Error(`Generated data doesn't match the units you selected — missing or renamed: ${missing.join(', ')}. Try again.`);
+  parsed.units = reconciled;
+
+  const awardingShort = f.awarding.split('/')[0].trim(); // e.g. "BTEC" from "BTEC / Pearson"
+  const qualId = slugify(`${awardingShort}-${f.subject}${f.code ? '-' + f.code : ''}`);
+  const displayName = `${f.level} ${f.type} in ${f.subject}`;
+  const shortName = `${f.level} ${f.subject}`.substring(0, 35);
+
+  const filename = `${qualId}-curriculum.js`;
+  const packageCode = buildPackageCode(qualId, parsed, displayName, shortName, f.level, f.awarding, f.name);
+
+  generatedCode = packageCode;
+  generatedFilename = filename;
+
+  document.getElementById('outputQualName').textContent = parsed.title || displayName;
+  document.getElementById('outputPreview').textContent = packageCode;
+  document.getElementById('outputArea').style.display = 'block';
+  document.getElementById('outputArea').scrollIntoView({ behavior: 'smooth' });
+  showStatus(statusId, 'success', `✓ Package built — ${parsed.units.length} units, ${parsed.units.reduce((n, u) => n + (u.outcomes?.length || 0), 0)} learning outcomes.`);
+}
+
+function copyFullDetailPrompt() {
+  const selected = proposedUnits.filter(u => u.__include);
+  if (!selected.length) { showStatus('fullDetailPromptStatus', 'error', 'Tick at least one unit in Step 4 first.'); return; }
+  const f = readQualForm();
+  const prompt = buildFullDetailChatPrompt(f, selected);
+  navigator.clipboard.writeText(prompt).then(() => {
+    showStatus('fullDetailPromptStatus', 'success', '✓ Prompt copied. Paste it into Claude.ai (or any AI chat with real web search), then paste its reply into the box below.');
+  }).catch(() => {
+    showStatus('fullDetailPromptStatus', 'error', 'Could not copy automatically — select and copy the prompt text below by hand.');
+    const ta = document.getElementById('pastedFullDetailInput');
+    ta.value = prompt;
+    ta.placeholder = 'Copy failed — this is the prompt to paste into your AI chat. Replace it with the chat\'s reply once you have it.';
+  });
+}
+
+function parsePastedFullDetail() {
+  const raw = document.getElementById('pastedFullDetailInput').value.trim();
+  if (!raw) { showStatus('genStatus', 'error', 'Paste the reply from your AI chat first.'); return; }
+  const selected = proposedUnits.filter(u => u.__include);
+  if (!selected.length) { showStatus('genStatus', 'error', 'Tick at least one unit in Step 4 first.'); return; }
+  const f = readQualForm();
+  document.getElementById('outputArea').style.display = 'none';
+  try {
+    finalizePackageFromRaw(raw, selected, f, 'genStatus');
+  } catch (err) {
+    showStatus('genStatus', 'error', `Error: ${err.message}`);
+  }
+}
+
+async function generatePackage() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) { showStatus('genStatus', 'error', 'Please enter your Claude API key first.'); return; }
+
+  const selected = proposedUnits.filter(u => u.__include);
+  if (!selected.length) { showStatus('genStatus', 'error', 'Tick at least one unit in Step 4 first.'); return; }
+
+  const f = readQualForm();
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Generating…';
+  showStatus('genStatus', 'info', 'Calling Claude API — this takes 5–15 seconds…');
+  document.getElementById('outputArea').style.display = 'none';
+
+  const { systemPrompt, userPrompt } = buildFullDetailPrompts(f, selected);
 
   try {
-    const response = await fetch('/.netlify/functions/claude-proxy', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        apiKey,
-        model: 'claude-sonnet-4-6',
-        max_tokens: 8000,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }]
-      })
-    });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error?.message || `API error ${response.status}`);
-    }
-
-    const data = await response.json();
-    const rawContent = data.content?.[0]?.text || '';
-
-    // Extract the JSON object from the response
-    const objMatch = rawContent.match(/\{[\s\S]*\}/);
-    if (!objMatch) throw new Error('Could not find a valid object in the response. Try again.');
-
-    // Validate it parses
-    const parsed = JSON.parse(objMatch[0]);
-    if (!parsed.units || !Array.isArray(parsed.units)) throw new Error('Generated data is missing units array.');
-
-    // Wrap in self-installing package format
-    const filename = `${qualId}-curriculum.js`;
-    const scriptTag = `<script src="${filename}"><\/script>`;
-    const packageCode = buildPackageCode(qualId, parsed, displayName, shortName, level, awarding, name);
-
-    generatedCode = packageCode;
-    generatedFilename = filename;
-
-    document.getElementById('outputQualName').textContent = parsed.title || displayName;
-    document.getElementById('outputPreview').textContent = packageCode;
-    document.getElementById('scriptTagTracker').textContent = `<script src="${filename}"><\/script>`;
-    document.getElementById('outputArea').style.display = 'block';
-    document.getElementById('outputArea').scrollIntoView({ behavior: 'smooth' });
-    showStatus('genStatus', 'success', `✓ Package generated — ${parsed.units.length} units, ${parsed.units.reduce((n, u) => n + (u.outcomes?.length || 0), 0)} learning outcomes.`);
-
+    const rawContent = await callClaude(apiKey, systemPrompt, userPrompt, 8000);
+    finalizePackageFromRaw(rawContent, selected, f, 'genStatus');
   } catch (err) {
     showStatus('genStatus', 'error', `Error: ${err.message}`);
   } finally {
     btn.disabled = false;
-    btn.innerHTML = 'Generate Package';
+    btn.innerHTML = '⚡ Quick Generate (direct API)';
   }
 }
 
