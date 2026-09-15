@@ -597,6 +597,8 @@ function buildFullDetailInstructions() {
 
 Decide per-outcome, per-qualification, the way the real specification actually splits — don't force every unit to have both types if it doesn't: a purely knowledge unit can be entirely "formative"; a purely coursework-based unit may be entirely "summative".
 
+CRITICAL — never merge two learning outcomes into one, even when the real specification presents them as an obviously paired "know how to X" / "be able to X" pair (e.g. LO5 "Know how to lay floor joists" + LO6 "Be able to lay floor joists"). Each keeps its OWN ref, its OWN type, and its OWN criteria — a formative one and a summative one, never combined under one ref like "5-6" or one shared type. If the real spec has 8 learning outcomes, your output must have 8 separate outcome objects, not fewer. This is a real, specific mistake worth avoiding, not a stylistic preference.
+
 Reply with ONLY a single raw JSON object — no markdown code fences, no explanation, no comments, just the object starting with { and ending with } — in exactly this structure:
 {
   "title": "Full qualification title",
@@ -644,7 +646,7 @@ Rules:
 - Every outcome must have a "type" of exactly "formative" or "summative" — never omit it, never invent a third value.
 - "weight" (% exam weighting) and "qcount" (number of exam questions) are OPTIONAL and only meaningful on "formative" outcomes that are genuinely exam-weighted — omit both (or use null) if not applicable.
 - "assessmentMethod" is OPTIONAL and only meaningful on "summative" outcomes — a short plain-English description of how it's really assessed for this qualification.
-- Each unit must have 2–6 learning outcomes in total, mixing formative/summative the way the real qualification does.
+- Each unit has however many learning outcomes the real specification actually has — typically 2–8, but never invent a ceiling and merge outcomes to fit under one. A unit with 4 knowledge/practical pairs has 8 separate outcome objects, not 4.
 - Each learning outcome must have 2–5 criteria.
 - Criteria must be specific and measurable.
 - Base outcomes/criteria on the official UK qualification specification from the awarding body.`;
@@ -725,6 +727,16 @@ function finalizePackageFromRaw(rawContent, selected, f, statusId) {
   if (missing.length) throw new Error(`Generated data doesn't match the units you selected — missing or renamed: ${missing.join(', ')}. Try again.`);
   parsed.units = reconciled;
 
+  // Soft warning, not a hard block — a ref like "5-6" is the AI's most common
+  // failure mode: merging a knowledge LO with its paired practical LO into
+  // one outcome instead of keeping both, which silently loses separate
+  // formative/summative tracking for whatever got merged. Real specs almost
+  // never have a genuinely compound ref, so flag it rather than assume it's fine.
+  const suspiciousRefs = [];
+  parsed.units.forEach(u => u.outcomes.forEach(o => {
+    if (/[^0-9]/.test(String(o.ref))) suspiciousRefs.push(`${u.code} LO${o.ref}`);
+  }));
+
   const awardingShort = f.awarding.split('/')[0].trim(); // e.g. "BTEC" from "BTEC / Pearson"
   const qualId = slugify(`${awardingShort}-${f.subject}${f.code ? '-' + f.code : ''}`);
   const displayName = `${f.level} ${f.type} in ${f.subject}`;
@@ -740,7 +752,11 @@ function finalizePackageFromRaw(rawContent, selected, f, statusId) {
   document.getElementById('outputPreview').textContent = packageCode;
   document.getElementById('outputArea').style.display = 'block';
   document.getElementById('outputArea').scrollIntoView({ behavior: 'smooth' });
-  showStatus(statusId, 'success', `✓ Package built — ${parsed.units.length} units, ${parsed.units.reduce((n, u) => n + (u.outcomes?.length || 0), 0)} learning outcomes.`);
+  const outcomeCount = parsed.units.reduce((n, u) => n + (u.outcomes?.length || 0), 0);
+  const warning = suspiciousRefs.length
+    ? ` ⚠️ Check before installing — these look like two merged outcomes, not one real one: ${suspiciousRefs.join(', ')}.`
+    : '';
+  showStatus(statusId, suspiciousRefs.length ? 'error' : 'success', `✓ Package built — ${parsed.units.length} units, ${outcomeCount} learning outcomes.${warning}`);
 }
 
 function copyFullDetailPrompt() {
