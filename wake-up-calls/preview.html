@@ -1,0 +1,335 @@
+<title>Wake-Up Calls</title>
+<meta name="description" content="Admin dashboard preview for the Wake-up Calls attendance tool — sample data, not connected to Firebase.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  /* Single committed dark theme ("night before dawn") — this is the product's
+     actual visual identity, not a light/dark gap, so both themes render it. */
+  :root {
+    --ink: #0b1220; --dusk: #141b2e; --dusk-2: #1b2440; --line: #2a3455;
+    --paper: #f4f1ea; --dawn: #ff8a3d; --dawn-soft: #ffb870;
+    --confirm: #3ddc97; --alert: #ff5c5c; --muted: #97a2c4;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--ink); color: var(--paper);
+    font-family: "Inter", system-ui, sans-serif; min-height: 100%;
+  }
+  h1, h2, h3 { font-family: "Barlow Condensed", sans-serif; font-weight: 600; letter-spacing: 0.01em; margin: 0; }
+  .mono { font-family: "JetBrains Mono", monospace; }
+
+  [hidden] { display: none !important; }
+
+  /* ---------- preview chrome ---------- */
+  .preview-badge {
+    position: fixed; top: max(14px, env(safe-area-inset-top, 0px)); right: 14px; z-index: 50;
+    background: var(--dawn); color: var(--ink); font-weight: 700; font-size: 12px;
+    letter-spacing: 0.04em; text-transform: uppercase; padding: 6px 12px; border-radius: 999px;
+    box-shadow: 0 4px 18px rgba(255,138,61,0.35);
+  }
+
+  /* ---------- login screen ---------- */
+  .login-shell {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 20px; padding-block: max(20px, env(safe-area-inset-top,0px)) max(20px, env(safe-area-inset-bottom,0px));
+  }
+  .login-card {
+    width: 100%; max-width: 360px; background: var(--dusk); border: 1px solid var(--line);
+    border-radius: 14px; padding: 32px;
+  }
+  .login-card h1 { font-size: 26px; margin-bottom: 4px; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .login-card p.hint { margin-bottom: 20px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  input, select, textarea {
+    width: 100%; background: var(--ink); border: 1px solid var(--line); border-radius: 8px;
+    padding: 9px 10px; color: var(--paper); font-family: inherit; font-size: 14px;
+  }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--dawn); border-color: transparent; }
+  .btn {
+    border: none; border-radius: 8px; padding: 10px 16px; font-weight: 600; font-size: 14px;
+    cursor: pointer; transition: transform 0.08s ease, box-shadow 0.15s ease; font-family: inherit;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--dawn); color: var(--ink); }
+  .btn-primary:hover { box-shadow: 0 0 18px rgba(255,138,61,0.45); }
+  .btn-ghost { background: transparent; border: 1px solid var(--line); color: var(--paper); }
+  .btn-ghost:hover { border-color: var(--dawn-soft); }
+  .login-card .btn-primary { width: 100%; margin-top: 8px; }
+
+  /* ---------- header ---------- */
+  .topbar {
+    position: relative; overflow: hidden; display: flex; align-items: center;
+    justify-content: space-between; gap: 16px; padding: 20px 28px;
+    padding-top: max(20px, env(safe-area-inset-top, 0px));
+    background: linear-gradient(120deg, var(--ink) 0%, var(--dusk) 55%, var(--ink) 100%);
+    border-bottom: 1px solid var(--line); flex-wrap: wrap;
+  }
+  .topbar::before {
+    content: ""; position: absolute; inset: -40% -10%;
+    background: radial-gradient(circle at 20% 50%, rgba(255, 138, 61, 0.35), transparent 60%);
+    transform: translateX(-60%); animation: sunrise-sweep 1.8s ease-out forwards;
+  }
+  @media (prefers-reduced-motion: reduce) { .topbar::before { animation: none; opacity: 0.5; transform: none; } }
+  @keyframes sunrise-sweep { from { transform: translateX(-60%); opacity: 0.9; } to { transform: translateX(10%); opacity: 0.5; } }
+  .topbar-mark { position: relative; z-index: 1; font-family: "Barlow Condensed", sans-serif; font-size: 22px; font-weight: 700; text-transform: uppercase; }
+  .topbar-mark span { color: var(--dawn); }
+  .topbar-title { position: relative; z-index: 1; font-size: 15px; color: var(--muted); }
+
+  /* ---------- layout ---------- */
+  main.layout { max-width: 1100px; margin: 0 auto; padding: 24px 20px 64px; display: flex; flex-direction: column; gap: 20px; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+  .tab-btn {
+    background: none; border: none; color: var(--muted); font-family: "Barlow Condensed", sans-serif;
+    font-size: 16px; padding: 10px 16px; cursor: pointer; border-bottom: 2px solid transparent;
+  }
+  .tab-btn.active { color: var(--paper); border-bottom-color: var(--dawn); }
+  .panel { display: none; flex-direction: column; gap: 16px; }
+  .panel.active { display: flex; }
+  .card { background: var(--dusk); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  .card h2 { font-size: 20px; margin-bottom: 14px; }
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+
+  /* ---------- table ---------- */
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 640px; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); font-size: 14px; white-space: nowrap; }
+  th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  tr:last-child td { border-bottom: none; }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+    font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .status-pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .status-pending { background: rgba(151,162,196,0.15); color: var(--muted); }
+  .status-calling { background: rgba(255,138,61,0.15); color: var(--dawn); animation: ring-pulse 1.1s ease-in-out infinite; }
+  .status-confirmed { background: rgba(61,220,151,0.15); color: var(--confirm); }
+  .status-unconfirmed { background: rgba(255,92,92,0.15); color: var(--alert); }
+  @keyframes ring-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,138,61,0.45); } 50% { box-shadow: 0 0 0 6px rgba(255,138,61,0); } }
+  @media (prefers-reduced-motion: reduce) { .status-calling { animation: none; } }
+
+  .toggle { position: relative; width: 40px; height: 22px; border-radius: 999px; background: var(--line); border: none; cursor: pointer; padding: 0; }
+  .toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--paper); transition: transform 0.15s ease; }
+  .toggle.on { background: var(--dawn); }
+  .toggle.on::after { transform: translateX(18px); }
+
+  .row-actions { display: flex; gap: 6px; }
+  .icon-btn { background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 6px; padding: 5px 9px; font-size: 12px; cursor: pointer; font-family: inherit; }
+  .icon-btn:hover { color: var(--paper); border-color: var(--dawn-soft); }
+
+  .error-text { color: var(--alert); font-size: 13px; min-height: 18px; }
+  .success-text { color: var(--confirm); font-size: 13px; min-height: 18px; }
+</style>
+
+<!-- ===================== LOGIN SCREEN ===================== -->
+<div class="login-shell" id="loginScreen">
+  <form class="login-card" id="loginForm">
+    <h1>Wake<span style="color:var(--dawn)">·</span>Up Calls</h1>
+    <p class="hint">College admin sign-in — preview</p>
+    <label for="email">Email</label>
+    <input id="email" type="email" value="admin@example-college.ac.uk" autocomplete="off">
+    <div style="height:12px"></div>
+    <label for="password">Password</label>
+    <input id="password" type="password" value="••••••••" autocomplete="off">
+    <p class="hint" id="loginNote">This is a static preview with sample data — any details sign you in, nothing is checked against Firebase.</p>
+    <button type="submit" class="btn btn-primary">Sign in</button>
+  </form>
+</div>
+
+<!-- ===================== DASHBOARD ===================== -->
+<div id="dashboardScreen" hidden>
+  <span class="preview-badge">Preview · sample data</span>
+
+  <header class="topbar">
+    <div class="topbar-mark">Wake<span>·</span>Up Calls</div>
+    <div class="topbar-title">Attendance wake-up scheduling — admin@example-college.ac.uk</div>
+    <button class="btn btn-ghost" id="btnLogout">Sign out</button>
+  </header>
+
+  <main class="layout">
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="students">Students</button>
+      <button class="tab-btn" data-tab="settings">Settings</button>
+    </nav>
+
+    <section class="panel active" id="panel-students">
+      <div class="card">
+        <h2>Add student</h2>
+        <form id="addStudentForm" class="form-grid">
+          <div><label for="f_name">Name</label><input id="f_name" placeholder="Jordan Reyes"></div>
+          <div><label for="f_phone">Phone (E.164)</label><input id="f_phone" placeholder="+447700900123"></div>
+          <div><label for="f_studentId">Student ID</label><input id="f_studentId" inputmode="numeric" placeholder="Numeric only"></div>
+          <div><label for="f_callTime">Call time</label><input id="f_callTime" type="time" value="07:45"></div>
+          <div style="grid-column: 1 / -1;"><label for="f_reason">Reason (optional)</label><input id="f_reason" placeholder="e.g. Persistent lateness — Tutor: J. Smith"></div>
+        </form>
+        <div style="display:flex; gap:10px; align-items:center; margin-top:10px;">
+          <button class="btn btn-primary" id="btnAddStudent">Add student</button>
+          <span class="error-text" id="addStudentError"></span>
+          <span class="success-text" id="addStudentSuccess"></span>
+        </div>
+        <p class="hint">Manual entry only — there is no link to any college register or MIS.</p>
+      </div>
+
+      <div class="card">
+        <h2>Students</h2>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Name</th><th>Phone</th><th>Student ID</th><th>Call time</th><th>Reason</th><th>Status</th><th>On</th><th></th></tr>
+            </thead>
+            <tbody id="studentsTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-settings">
+      <div class="card">
+        <h2>Wake-up message</h2>
+        <div class="form-grid">
+          <div>
+            <label for="s_messageMode">Message mode</label>
+            <select id="s_messageMode">
+              <option value="tts" selected>Text-to-speech</option>
+              <option value="audio">Uploaded recording</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:14px;">
+          <label for="s_messageText">Spoken message (text-to-speech)</label>
+          <textarea id="s_messageText" rows="3" style="resize:vertical;">This is a wake-up call from your college. Please enter your student ID on the keypad now.</textarea>
+        </div>
+        <p class="hint">Only one message is used for the whole tool — everyone hears the same call.</p>
+      </div>
+
+      <div class="card">
+        <h2>Call &amp; retry behaviour</h2>
+        <div class="form-grid">
+          <div><label>Retry interval (minutes)</label><input type="number" value="5"></div>
+          <div><label>Countdown length (minutes)</label><input type="number" value="15"></div>
+          <div><label>Log retention (days)</label><input type="number" value="90"></div>
+          <div><label>Timezone</label><input value="Europe/London"></div>
+        </div>
+        <p class="hint">No cap on retries — a student keeps getting re-called every retry interval until confirmed or switched off.</p>
+        <div style="margin-top:14px;"><button class="btn btn-primary">Save settings</button></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  (function () {
+    var students = [
+      { name: "Amara Okafor", phone: "+447700900111", studentId: "20481", callTime: "07:30", reason: "Persistent lateness — Tutor: R. Patel", enabled: true, status: "confirmed" },
+      { name: "Liam Carter", phone: "+447700900122", studentId: "20502", callTime: "07:40", reason: "3 missed Mondays this term", enabled: true, status: "calling" },
+      { name: "Sofia Nowak", phone: "+447700900133", studentId: "20517", callTime: "07:45", reason: "", enabled: true, status: "unconfirmed" },
+      { name: "Deshawn Ali", phone: "+447700900144", studentId: "20529", callTime: "08:00", reason: "First warning — attendance review", enabled: false, status: "pending" }
+    ];
+
+    var STATUS_LABEL = { pending: "Pending", calling: "Calling", confirmed: "Confirmed", unconfirmed: "Unconfirmed" };
+
+    function escapeHtml(text) {
+      var div = document.createElement("div");
+      div.textContent = text == null ? "" : text;
+      return div.innerHTML;
+    }
+
+    function renderStudents() {
+      var tbody = document.getElementById("studentsTbody");
+      if (!students.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="hint">No students yet — add one above.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = "";
+      students.forEach(function (s, i) {
+        var tr = document.createElement("tr");
+        var status = s.status || "pending";
+        tr.innerHTML =
+          "<td>" + escapeHtml(s.name) + "</td>" +
+          '<td class="mono">' + escapeHtml(s.phone) + "</td>" +
+          '<td class="mono">' + escapeHtml(s.studentId) + "</td>" +
+          '<td class="mono">' + escapeHtml(s.callTime) + "</td>" +
+          "<td>" + escapeHtml(s.reason || "") + "</td>" +
+          '<td><span class="status-pill status-' + status + '">' + STATUS_LABEL[status] + "</span></td>" +
+          '<td><button class="toggle ' + (s.enabled ? "on" : "") + '" aria-label="Enabled" data-i="' + i + '"></button></td>' +
+          '<td class="row-actions"><button class="icon-btn btn-call-now" data-i="' + i + '">Call now</button><button class="icon-btn btn-remove" data-i="' + i + '">Remove</button></td>';
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById("loginForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      document.getElementById("loginScreen").hidden = true;
+      document.getElementById("dashboardScreen").hidden = false;
+      renderStudents();
+    });
+
+    document.getElementById("btnLogout").addEventListener("click", function () {
+      document.getElementById("dashboardScreen").hidden = true;
+      document.getElementById("loginScreen").hidden = false;
+    });
+
+    document.querySelectorAll(".tab-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        document.querySelectorAll(".tab-btn").forEach(function (b) { b.classList.remove("active"); });
+        document.querySelectorAll(".panel").forEach(function (p) { p.classList.remove("active"); });
+        btn.classList.add("active");
+        document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+      });
+    });
+
+    document.getElementById("studentsTbody").addEventListener("click", function (e) {
+      var target = e.target;
+      var i = target.dataset ? Number(target.dataset.i) : NaN;
+      if (isNaN(i)) return;
+
+      if (target.classList.contains("toggle")) {
+        students[i].enabled = !students[i].enabled;
+        if (!students[i].enabled) students[i].status = "pending";
+        renderStudents();
+      } else if (target.classList.contains("btn-call-now")) {
+        target.disabled = true;
+        target.textContent = "Calling…";
+        students[i].status = "calling";
+        renderStudents();
+        setTimeout(function () {
+          students[i].status = Math.random() > 0.35 ? "confirmed" : "unconfirmed";
+          renderStudents();
+        }, 1600);
+      } else if (target.classList.contains("btn-remove")) {
+        if (confirm("Remove " + students[i].name + " from the wake-up list?")) {
+          students.splice(i, 1);
+          renderStudents();
+        }
+      }
+    });
+
+    document.getElementById("btnAddStudent").addEventListener("click", function () {
+      var errorEl = document.getElementById("addStudentError");
+      var successEl = document.getElementById("addStudentSuccess");
+      errorEl.textContent = "";
+      successEl.textContent = "";
+      var name = document.getElementById("f_name").value.trim();
+      var phone = document.getElementById("f_phone").value.trim();
+      var studentId = document.getElementById("f_studentId").value.trim();
+      var callTime = document.getElementById("f_callTime").value;
+      var reason = document.getElementById("f_reason").value.trim();
+
+      if (!name || !phone || !studentId || !callTime) {
+        errorEl.textContent = "Name, phone, student ID and call time are all required.";
+        return;
+      }
+      students.push({ name: name, phone: phone, studentId: studentId, callTime: callTime, reason: reason, enabled: true, status: "pending" });
+      renderStudents();
+      document.getElementById("addStudentForm").reset();
+      document.getElementById("f_callTime").value = "07:45";
+      successEl.textContent = "Added " + name + ".";
+      setTimeout(function () { successEl.textContent = ""; }, 2500);
+    });
+
+    document.getElementById("s_messageMode").addEventListener("change", function () {});
+  })();
+</script>
